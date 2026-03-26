@@ -2,7 +2,7 @@
 An AI That Plays Pokedip Wish Me Luck
 
 ## How This Actually Will Work
-Main AI Model.py
+Main AI model.py
 weights.npz A Numpy Weights File, Self Explanatory
 learn.py For Training
 train.json With A Ton Of Moves Written In And Evaluated As Floats And Whos Friends With Who, Whos Neutral With Who, Whos Enemies With Who
