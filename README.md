@@ -12,5 +12,5 @@ conversations.py Handles Relations Between Players
 A Game Selection System So if There Are Ever More Than 1 Game Of Pokedip (Unlikely) You Can Choose Between Them
 
 ## The Main Modes
-"Smart" Mode, Actually Treis To Do Good
+"Smart" Mode, Actually Tries To Do Good
 A1 Bug, A2 Ground, A3 Fairy, A4 Steel Mode, Misorders A Bunch And Does Bad Moves, May Just Randomly Say Hand Moves Off To An Ally
