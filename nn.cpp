@@ -2,9 +2,7 @@
 
 std::mt19937 NN::gen{std::random_device{}()};
 
-Matrix::Matrix(size_t rows, size_t cols)
-    : rows(rows), cols(cols)
-{
+Matrix::Matrix(size_t rows, size_t cols) : rows(rows), cols(cols) {
     data = new double[rows * cols]{};
 }
 
@@ -13,16 +11,12 @@ Matrix::Matrix(Matrix& other) : rows(other.rows), cols(other.cols) {
     std::copy(other.data, other.data + rows * cols, data);
 }
 
-Matrix::Matrix(const Matrix& other)
-    : rows(other.rows), cols(other.cols)
-{
+Matrix::Matrix(const Matrix& other) : rows(other.rows), cols(other.cols) {
     data = new double[rows * cols];
     std::copy(other.data, other.data + rows * cols, data);
 }
 
-Matrix::Matrix(Matrix&& other) noexcept
-    : rows(other.rows), cols(other.cols), data(other.data)
-{
+Matrix::Matrix(Matrix&& other) noexcept : rows(other.rows), cols(other.cols), data(other.data) {
     other.data = nullptr;
     other.rows = 0;
     other.cols = 0;
@@ -39,8 +33,9 @@ size_t Matrix::GetIndex(size_t row, size_t col) const {
 }
 
 double Matrix::Get(size_t row, size_t col) const {
-    if (row >= rows || col >= cols)
+    if (row >= rows || col >= cols) {
         throw std::out_of_range("Index out of range");
+    }
 
     return data[GetIndex(row, col)];
 }
@@ -78,35 +73,41 @@ Matrix Matrix::Transpose() const {
 }
 
 Matrix Matrix::operator+(const Matrix& other) const {
-    if (!CheckSize(other))
+    if (!CheckSize(other)) {
         throw std::runtime_error("Matrix size mismatch");
+    }
 
     Matrix result(rows, cols);
 
-    for (size_t r = 0; r < rows; r++)
-        for (size_t c = 0; c < cols; c++)
+    for (size_t r = 0; r < rows; r++) {
+        for (size_t c = 0; c < cols; c++) {
             result.Set(r,c, Get(r,c) + other.Get(r,c));
+        }
+    }
 
     return result;
 }
 
 Matrix Matrix::operator-(const Matrix& other) const {
-    if (!CheckSize(other))
+    if (!CheckSize(other)) {
         throw std::runtime_error("Matrix size mismatch");
+    }
 
     Matrix result(rows, cols);
 
-    for (size_t r = 0; r < rows; r++)
-        for (size_t c = 0; c < cols; c++)
+    for (size_t r = 0; r < rows; r++) {
+        for (size_t c = 0; c < cols; c++) {
             result.Set(r,c, Get(r,c) - other.Get(r,c));
+        }
+    }
 
     return result;
 }
 
 Matrix Matrix::operator*(const Matrix& other) const {
-
-    if (cols != other.rows)
+    if (cols != other.rows) {
         throw std::runtime_error("Matrix multiply dimension mismatch");
+    }
 
     Matrix result(rows, other.cols);
 
@@ -115,8 +116,9 @@ Matrix Matrix::operator*(const Matrix& other) const {
 
             double sum = 0.0;
 
-            for (size_t k = 0; k < cols; k++)
+            for (size_t k = 0; k < cols; k++) {
                 sum += Get(r,k) * other.Get(k,c);
+            }
 
             result.Set(r,c,sum);
         }
@@ -128,9 +130,11 @@ Matrix Matrix::operator*(const Matrix& other) const {
 Matrix Matrix::operator*(double scalar) const {
     Matrix result(rows, cols);
 
-    for (size_t r = 0; r < rows; r++)
-        for (size_t c = 0; c < cols; c++)
+    for (size_t r = 0; r < rows; r++) {
+        for (size_t c = 0; c < cols; c++) {
             result.Set(r,c, Get(r,c) * scalar);
+        }
+    }
 
     return result;
 }
@@ -168,26 +172,28 @@ Matrix& Matrix::operator=(Matrix&& other) noexcept {
 bool Matrix::operator==(const Matrix& other) const {
     if (!CheckSize(other)) return false;
 
-    for (size_t i = 0; i < rows*cols; i++)
-        if (data[i] != other.data[i])
+    for (size_t i = 0; i < rows*cols; i++) {
+        if (data[i] != other.data[i]) {
             return false;
+        }
+    }
 
     return true;
 }
 
 DataSet::~DataSet() {}
 
-DataLoader::DataLoader(DataSet* data, size_t num_batches, bool shuffle) : data(data), num_batches(num_batches), shuffle(shuffle) {
+DataLoader::DataLoader(DataSet* data, size_t num_batches, bool shuffle) : num_batches(num_batches), shuffle(shuffle) {
     batch_size = data->Size() / num_batches;
-    this->idx = 0;
 
     auto vec = data->ToVector();
 
     for (size_t i = 0; i < num_batches; ++i) {
         size_t start = i * batch_size;
 
-        if (start >= data->Size())
+        if (start >= data->Size()) {
             break;
+        }
 
         auto& Xvec = std::get<0>(vec);
         auto& Yvec = std::get<1>(vec);
@@ -199,13 +205,9 @@ DataLoader::DataLoader(DataSet* data, size_t num_batches, bool shuffle) : data(d
         assert(start <= end);
         assert(end <= total);
 
-        std::vector<Matrix> subX(
-            Xvec.begin() + start,
-            Xvec.begin() + end);
+        std::vector<Matrix> subX(Xvec.begin() + start, Xvec.begin() + end);
 
-        std::vector<Matrix> subY(
-            Yvec.begin() + start,
-            Yvec.begin() + end);
+        std::vector<Matrix> subY(Yvec.begin() + start, Yvec.begin() + end);
 
         auto batchData = data->CloneEmpty();
         batchData->Copy(subX, subY);
@@ -215,22 +217,49 @@ DataLoader::DataLoader(DataSet* data, size_t num_batches, bool shuffle) : data(d
     }
 }
 
+DataLoader::Iterator DataLoader::Begin() {
+    return Iterator(this, 0);
+}
+
+DataLoader::Iterator DataLoader::End() {
+    return Iterator(this, batches.size());
+}
+
+DataLoader::Iterator::Iterator(DataLoader* loader, size_t index) {
+    this->loader = loader;
+    this->idx = index;
+}
+
+const DataSet& DataLoader::Iterator::operator*() const {
+    return *(loader->batches[idx]);
+}
+
+DataSet* DataLoader::Iterator::operator->() const {
+    return loader->batches[idx].get();
+}
+
+DataLoader::Iterator& DataLoader::Iterator::operator++() {
+    idx = (idx + 1) % loader->batches.size();
+    return *this;
+}
+
+DataLoader::Iterator DataLoader::Iterator::operator++(int) {
+    Iterator tmp = *this;
+    ++(*this);
+    return tmp;
+}
+
+bool DataLoader::Iterator::operator==(const Iterator& other) const {
+    return loader == other.loader && idx == other.idx;
+}
+
+bool DataLoader::Iterator::operator!=(const Iterator& other) const {
+    return !(*this == other);
+}
+
+/*
 std::tuple<Matrix, Matrix> DataLoader::operator*() const {
     std::tuple<std::vector<Matrix>, std::vector<Matrix>> vec = batches.at(idx)->ToVector();
-
-    /*
-    size_t idx = 0;
-    for (size_t i = 0; i < data_X.cols(); i++) {
-        for (size_t j = 0; j < data_X.rows(); j++) {
-            data_X.Set(i, j, std::get<0>(vec)[idx]);
-            data_Y.Set(i, j, std::get<1>(vec)[idx]);
-            idx++;
-        }
-    }
-
-    data_X.Transpose();
-    data_Y.Transpose();
-    */
 
     Matrix data_X = std::get<0>(vec).at(0);
     Matrix data_Y = std::get<1>(vec).at(0);
@@ -251,30 +280,12 @@ bool DataLoader::operator!=(const DataLoader& other) const {
     return !(*this == other);
 }
 
-/*
-Matrix* DataLoader::operator->() const {
-    std::vector<Matrix> vec = batch_ptr->ToVector();
-    Matrix data(batch_size, vec[0].rows());
-
-    for (size_t i = 0; i < data.cols(); i++) {
-        for (size_t j = 0; j < data.rows(); j++) {
-            data.Set(j, i, i * data.cols() + j);
-        }
-    }
-
-    return &data;
-}
-*/
-
 DataSet* DataLoader::operator->() const {
     return batches[idx].get();
 }
+*/
 
-NN::NN(size_t inputs,
-       size_t outputs,
-       size_t num_layers,
-       std::vector<size_t> num_neurons)
-{
+NN::NN(size_t inputs, size_t outputs, size_t num_layers, std::vector<size_t> num_neurons) {
     this->inputs = inputs;
     this->outputs = outputs;
     this->num_layers = num_layers;
@@ -286,36 +297,41 @@ NN::NN(size_t inputs,
     head = nullptr;
     Layer* prev = nullptr;
 
-    for (size_t i = 0; i < num_neurons.size(); i++)
-    {
+    for (size_t i = 0; i < num_neurons.size(); i++) {
         size_t curr_size = num_neurons[i];
 
-        // ✅ weights = prev × current
+        // Initialize weights to random values
         Matrix weights(prev_size, curr_size);
 
-        for (size_t r = 0; r < weights.Rows(); r++)
-            for (size_t c = 0; c < weights.Cols(); c++)
+        for (size_t r = 0; r < weights.Rows(); r++) {
+            for (size_t c = 0; c < weights.Cols(); c++) {
                 weights.Set(r, c, dist(gen));
+            }
+        }
 
-        // ✅ bias = 1 × current
+        // Initialize biases to random values
         Matrix biases(1, curr_size);
-        for (size_t c = 0; c < curr_size; c++)
+        for (size_t c = 0; c < curr_size; c++) {
             biases.Set(0, c, dist(gen));
+        }
 
-        Layer* layer =
-            new Layer(weights, curr_size, biases, nullptr, prev);
+        // Store new information in linked list
+        Layer* layer = new Layer(weights, curr_size, biases, nullptr, prev);
 
-        if (!head)
+        if (!head) {
             head = layer;
-        else
+        } else {
             prev->next = layer;
+        }
 
+        // Update pointers
         prev = layer;
         prev_size = curr_size;
     }
 }
 
 NN::~NN() {
+    // Destroy linked list
     Layer* current = this->head;
 
     while (current) {
@@ -348,7 +364,6 @@ inline double NN::Error(Matrix output, Matrix target) const {
     return pow(sum, 2);
 }
 
-// --- Forward Pass ---
 std::vector<double> NN::Forward(const std::vector<double>& inputs) const {
     // Convert inputs to 1×n matrix
     Matrix current_input(1, inputs.size());
@@ -363,9 +378,11 @@ std::vector<double> NN::Forward(const std::vector<double>& inputs) const {
         z = z + current->biases;
 
         // Apply sigmoid activation
-        for (size_t row = 0; row < z.Rows(); row++)
-            for (size_t col = 0; col < z.Cols(); col++)
+        for (size_t row = 0; row < z.Rows(); row++) {
+            for (size_t col = 0; col < z.Cols(); col++) {
                 z.Set(row, col, Sigmoid(z.Get(row, col)));
+            }
+        }
 
         current_input = z;
         current = current->next;
@@ -373,19 +390,19 @@ std::vector<double> NN::Forward(const std::vector<double>& inputs) const {
 
     // Convert final matrix output to vector
     std::vector<double> res(current_input.Cols());
-    for (size_t col = 0; col < current_input.Cols(); col++)
+    for (size_t col = 0; col < current_input.Cols(); col++) {
         res[col] = current_input.Get(0, col);
+    }
 
     return res;
 }
 
-double NN::Backward(const std::vector<double>& inputs,
-                    const std::vector<double>& target,
-                    double lr) {
-    // --- Forward Pass ---
+double NN::Backward(const std::vector<double>& inputs, const std::vector<double>& target, double lr) {
+    // Perform forward pass to get each layer value
     Matrix input_matrix(1, inputs.size());
-    for (size_t col = 0; col < inputs.size(); col++)
+    for (size_t col = 0; col < inputs.size(); col++) {
         input_matrix.Set(0, col, inputs[col]);
+    }
 
     std::vector<Matrix> layer_outputs;
     Matrix current_input = input_matrix;
@@ -397,9 +414,11 @@ double NN::Backward(const std::vector<double>& inputs,
         z = z + current->biases;
 
         // Apply sigmoid activation
-        for (size_t row = 0; row < z.Rows(); row++)
-            for (size_t col = 0; col < z.Cols(); col++)
+        for (size_t row = 0; row < z.Rows(); row++) {
+            for (size_t col = 0; col < z.Cols(); col++) {
                 z.Set(row, col, Sigmoid(z.Get(row, col)));
+            }
+        }
 
         layer_outputs.push_back(z);
         current_input = z;
@@ -408,10 +427,11 @@ double NN::Backward(const std::vector<double>& inputs,
 
     Matrix output = current_input; // final layer output
 
-    // --- Compute Loss (MSE) ---
+    // Get loss
     Matrix target_matrix(1, target.size());
-    for (size_t col = 0; col < target.size(); col++)
+    for (size_t col = 0; col < target.size(); col++) {
         target_matrix.Set(0, col, target[col]);
+    }
 
     Matrix diff = output - target_matrix;
     double loss = 0.0;
@@ -419,24 +439,27 @@ double NN::Backward(const std::vector<double>& inputs,
         for (size_t col = 0; col < diff.Cols(); col++)
             loss += diff.Get(row, col) * diff.Get(row, col);
 
-    // --- Backpropagation ---
+    // Backwards pass 
     Matrix dprev = diff; // gradient of loss w.r.t output
     for (int layer_idx = layer_outputs.size() - 1; layer_idx >= 0; layer_idx--) {
         Matrix activation = layer_outputs[layer_idx];
 
         // derivative of sigmoid
         Matrix dactivation(activation.Rows(), activation.Cols());
-        for (size_t row = 0; row < activation.Rows(); row++)
+        for (size_t row = 0; row < activation.Rows(); row++) {
             for (size_t col = 0; col < activation.Cols(); col++) {
                 double a = activation.Get(row, col);
                 dactivation.Set(row, col, a * (1 - a));
             }
+        }
 
         // dz = dprev ⊙ sigmoid'(z)
         Matrix dz(activation.Rows(), activation.Cols());
-        for (size_t row = 0; row < dz.Rows(); row++)
-            for (size_t col = 0; col < dz.Cols(); col++)
+        for (size_t row = 0; row < dz.Rows(); row++) {
+            for (size_t col = 0; col < dz.Cols(); col++) {
                 dz.Set(row, col, dprev.Get(row, col) * dactivation.Get(row, col));
+            }
+        }
 
         // input to this layer
         Matrix input_to_layer = (layer_idx == 0) ? input_matrix : layer_outputs[layer_idx - 1];
@@ -454,8 +477,9 @@ double NN::Backward(const std::vector<double>& inputs,
         Matrix dbias(1, dz.Cols());
         for (size_t col = 0; col < dz.Cols(); col++) {
             double sum = 0.0;
-            for (size_t row = 0; row < dz.Rows(); row++)
+            for (size_t row = 0; row < dz.Rows(); row++) {
                 sum += dz.Get(row, col);
+            }
             dbias.Set(0, col, sum);
         }
         layer_ptr->biases = layer_ptr->biases - (dbias * lr);
@@ -467,35 +491,39 @@ double NN::Backward(const std::vector<double>& inputs,
     return loss;
 }
 
-void NN::Train(size_t epochs, double lr, DataLoader& loader)
-{
-    for (size_t epoch = 0; epoch < epochs; epoch++)
-    {
+void NN::Train(size_t epochs, double lr, DataLoader& loader) {
+    auto it = loader.Begin();
+    for (size_t epoch = 0; epoch < epochs; epoch++) {
         double loss = 0.0;
 
-        auto data = *loader;
-        Matrix X = std::get<0>(data);
-        Matrix Y = std::get<1>(data);
+        auto ptr = it.operator->();
+        assert(ptr != nullptr);
+        auto data = ptr->Clone();
+        std::tuple<std::vector<Matrix>, std::vector<Matrix>> tuple = data->ToVector();
+        Matrix X = std::get<0>(tuple)[0];
+        Matrix Y = std::get<1>(tuple)[0];
 
-        // iterate over samples (ROWS)
-        for (size_t sample = 0; sample < X.Rows(); sample++)
-        {
+        // iterate over samples
+        for (size_t sample = 0; sample < X.Rows(); sample++) {
             std::vector<double> X_vec(inputs);
             std::vector<double> Y_vec(outputs);
 
-            // extract ONE SAMPLE
-            for (size_t feature = 0; feature < X.Cols(); feature++)
+            // extract sample
+            for (size_t feature = 0; feature < X.Cols(); feature++) {
                 X_vec.at(feature) = X.Get(sample, feature);
+            }
 
-            for (size_t out = 0; out < Y.Cols(); out++)
+            for (size_t out = 0; out < Y.Cols(); out++) {
                 Y_vec.at(out) = Y.Get(sample, out);
+            }
 
             loss += Backward(X_vec, Y_vec, lr);
         }
 
-        if (epoch % 10 == 0)
+        if (epoch % 10 == 0) {
             std::cout << "Epoch " << epoch << " loss: " << loss << "\n";
+        }
 
-        ++loader;
+        it++;
     }
 }

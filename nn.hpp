@@ -58,14 +58,26 @@ class Matrix {
         /**
          * @brief Copy constructor
          * 
-         * This copies data from another matrix and creates a new matrix with the same data.
+         * This copies data - deep copy - from another matrix and creates a new matrix with the same data.
          * 
-         * @param other A different matrix to copy into this.
+         * @param other A reference to a different matrix to copy into this.
          */
         Matrix(Matrix& other);
 
+        /**
+         * @brief Copy constructor
+         * 
+         * This copies data - deep copy - from another matrix and creates a new matrix with the same data.
+         * 
+         * @param other A const reference to a different matrix to copy into this.
+         */
         Matrix(const Matrix& other);
 
+        /**
+         * @brief Default constructor
+         * 
+         * This sets rows and cols to 0, and data to nullptr. Default values for all members.
+         */
         Matrix();
 
         /**
@@ -98,6 +110,13 @@ class Matrix {
          */
         void Set(size_t row, size_t col, double data);
 
+        /**
+         * @brief Performs the transposition of the current matrix. Does not modify data.
+         * 
+         * This swaps the rows and cols of the matrix and returns the result. Data is not modified as a new matrix is returned.
+         * 
+         * @return The newly created matrix with the transposed data.
+         */
         Matrix Transpose() const;
 
         /**
@@ -175,76 +194,299 @@ class Matrix {
          */
         Matrix& operator=(const Matrix& other);
 
+        /**
+         * @brief Move constructor for matrices.
+         * 
+         * Sets data in new matrix to data in other matrix with a deep copy, and destroys the old matrix.
+         * 
+         * @param other A different matrix to be destroyed and have its data moved into this.
+         */
         Matrix(Matrix&& other) noexcept;
 
+        /**
+         * @brief Move operator for matrices.
+         * 
+         * Sets data in this to data in other matrix with a deep copy, and destroys the old matrix.
+         * 
+         * @param other A different matrix to be destroyed and have its data moved into this.
+         * @return The matrix with the moved data stored.
+         */
         Matrix& operator=(Matrix&& other) noexcept;
 
+        /**
+         * @brief Equality operator for matrices.
+         * 
+         * Checks if sizes and data are equal. Returns true if they are and false otherwise.
+         * 
+         * @param other A matrix to compare against this.
+         * @return True if they are equal, false otherwise.
+         */
         bool operator==(const Matrix& other) const;
 };
 
+/**
+ * @class DataSet
+ * @brief An abstract class representing data
+ * 
+ * An abstract class used in the DataLoader class for batching and data storage. Inherited classes must implement all methods.
+ * 
+ * @see DataLoader
+ */
 class DataSet {
-    public:
-        DataSet() {X = std::vector<Matrix>(); Y = std::vector<Matrix>();};
-
-        DataSet(const Matrix& X, const Matrix& Y) : X({X}), Y({Y}) {};
-
-        virtual void Copy(Matrix* X, Matrix* Y) = 0;
-
-        virtual void Copy(std::vector<Matrix>& X, std::vector<Matrix>& Y) = 0;
-
-        virtual void Copy(DataSet& other) = 0;
-
-        virtual std::unique_ptr<DataSet> CloneEmpty() const = 0;
-
-        virtual ~DataSet() = 0;
-
-        virtual void AddSample(Matrix& X, Matrix& Y) = 0;
-
-        virtual size_t Size() const = 0;
-
-        virtual std::tuple<Matrix, Matrix> Get(size_t index) const = 0;
-
-        virtual std::vector<Matrix> GetX() const = 0;
-
-        virtual std::vector<Matrix> GetY() const = 0;
-
-        virtual std::tuple<std::vector<Matrix>, std::vector<Matrix>> ToVector() const = 0;
-    
     protected:
+        // Data and target matrices, stored in vectors for if there are multiple.
         std::vector<Matrix> X;
         std::vector<Matrix> Y;
+
+    public:
+        /**
+         * @brief Default constructor
+         * 
+         * Sets X and Y to empty vectors. Data should be put in with AddSample or Copy after.
+         */
+        DataSet() {X = std::vector<Matrix>(); Y = std::vector<Matrix>();};
+
+        /**
+         * @brief Constructor
+         * 
+         * Sets X and Y to vectors with 1 element each, which is the data passed in.
+         * 
+         * @param X A const reference to a matrix of the train/test data.
+         * @param Y A const reference to a matrix of the target data.
+         */
+        DataSet(const Matrix& X, const Matrix& Y) : X({X}), Y({Y}) {};
+
+        /**
+         * @brief Copies data into vectors.
+         * 
+         * Pure virtual function whose implementations should copy data into vectors by overwriting old data.
+         * 
+         * @param X A pointer to a matrix that will overwrite X data in the class.
+         * @param Y A pointer to a matrix that will overwrite Y data in the class.
+         */
+        virtual void Copy(Matrix* X, Matrix* Y) = 0;
+
+        /**
+         * @brief Copies vectors into class.
+         * 
+         * Pure virtual function whose implementation should copy data into vectors by overwriting old data with full new data.
+         * 
+         * @param X A reference to a vector of new X data that will overwrite old X data.
+         * @param Y A reference to a vector of new Y data that will overwrite old Y data.
+         */
+        virtual void Copy(std::vector<Matrix>& X, std::vector<Matrix>& Y) = 0;
+
+        /**
+         * @brief Copies a different dataset into this.
+         * 
+         * Pure virtual function whose implementation should copy data into this by overwriting with the data of other.
+         * 
+         * @param other A reference to another dataset that will overwrite data in this.
+         */
+        virtual void Copy(DataSet& other) = 0;
+
+        /**
+         * @brief Creates a unique pointer to an empty instance of itself.
+         * 
+         * Pure virtual function whose implementation should create a unique pointer of an empty version of itself with a covariant return type.
+         * 
+         * @return A unique pointer to an empty instance of the inherited class.
+         */
+        virtual std::unique_ptr<DataSet> CloneEmpty() const = 0;
+
+        virtual std::unique_ptr<DataSet> Clone() const = 0;
+
+        /**
+         * @brief Destructor
+         * 
+         * Pure virtual function whose implementation should clean up data loaded/created.
+         */
+        virtual ~DataSet() = 0;
+
+        /**
+         * @brief Adds data into existing vectors.
+         * 
+         * A pure virtual function whose implementation should append new data onto old data vectors.
+         * 
+         * @param X A reference to a matrix that will be appended onto the X vector.
+         * @param Y A reference to a matrix that will be appended onto the Y vector.
+         */
+        virtual void AddSample(Matrix& X, Matrix& Y) = 0;
+
+        /**
+         * @brief Gets the size of the data.
+         * 
+         * A pure virtual function whose implementation should return the amount of rows in data.
+         * 
+         * @return The amount of rows in any one of the data or target matrices.
+         */
+        virtual size_t Size() const = 0;
+
+        /**
+         * @brief Gets data and target matrices at any index.
+         * 
+         * A pure virtual function whose implementation should get the data and target matrices at any index and return them as a tuple.
+         * 
+         * @param index The index in the vectors of which data to retrieve.
+         * @return A tuple of the order X, Y of the data found.
+         */
+        virtual std::tuple<Matrix, Matrix> Get(size_t index) const = 0;
+
+        /**
+         * @brief Gets vector of data matrices.
+         * 
+         * A pure virtual function whose implementation should return the X vector.
+         * 
+         * @return The vector of X data.
+         */
+        virtual std::vector<Matrix> GetX() const = 0;
+
+        /**
+         * @brief Gets vector of target matrices.
+         * 
+         * A pure virtual function whose implementation should return the Y vector.
+         * 
+         * @return The vector of Y data.
+         */
+        virtual std::vector<Matrix> GetY() const = 0;
+
+        /**
+         * @brief Converts all data in vectors to vectors of row matrices.
+         * 
+         * A pure virtual function whose implementation should convert each matrix into different row matrices and append them into vectors and return them as tuples.
+         * 
+         * @return A tuple of the vectors of row matrices.
+         */
+        virtual std::tuple<std::vector<Matrix>, std::vector<Matrix>> ToVector() const = 0;
 };
 
+/**
+ * @class DataLoader
+ * @brief Handles batching and shuffling of DataSets.
+ * 
+ * Contains a vector of unique pointers to DataSets that can be shuffled and is batched. Can give an iterator to said batches.
+ */
 class DataLoader {
     protected:
-        DataSet* data;
+        // Batch data
         std::vector<std::unique_ptr<DataSet>> batches;
+        // Amount of batches and expected size of each batch
         size_t num_batches;
         size_t batch_size;
-        size_t idx;
+        // If shuffled or not
+        // TODO: Make shuffle do something in constructor
         bool shuffle;
     
     public:
+        /**
+         * @brief Constructor
+         * 
+         * Takes in 1 large DataSet, splits into an amount of batches and can shuffle.
+         * 
+         * @param data A pointer to a DataSet that will be batched and potentiall shuffled.
+         * @param num_batches The amount of batches to split the data into.
+         * @param shuffle A bool on wether data should be shuffled around.
+         */
         DataLoader(DataSet* data, size_t num_batches, bool shuffle);
 
-        std::tuple<Matrix, Matrix> operator*() const;
+        /**
+         * @class Iterator
+         * @brief An iterator that goes over each batch in the loader.
+         * 
+         * Contains a pointer to the DataLoader and an index of which batch is on. Supports dereferencing, increment, post-increment and equality checks.
+         */
+        class Iterator {
+            protected:
+                // A pointer to the DataLoader which this was created from
+                DataLoader* loader;
+                // The index of the batch we are currently on - does wrap around
+                size_t idx;
 
-        DataLoader& operator++();
+            public:
+                /**
+                 * @brief Constructor.
+                 * 
+                 * Takes in a pointer to the original loader and starting index to store.
+                 * 
+                 * @param loader The original loader to get data from.
+                 * @param index The starting index the iterator is at.
+                 */
+                Iterator(DataLoader* loader, size_t index);
 
-        DataLoader operator++(int) = delete;
+                /**
+                 * @brief Dereferences to get current batch
+                 * 
+                 * Gets batch from loader at current index.
+                 * 
+                 * @return A const reference to the current batch of the iterator.
+                 */
+                const DataSet& operator*() const;
 
-        bool operator==(const DataLoader& other) const;
+                /**
+                 * @brief Gets current pointer.
+                 * 
+                 * Gets a pointer to the current batch from loader.
+                 * 
+                 * @return A pointer to the current batch.
+                 */
+                DataSet* operator->() const;
 
-        bool operator!=(const DataLoader& other) const;
+                /**
+                 * @brief Increases index by 1.
+                 * 
+                 * Increases index by 1 (wraps around if needed) and returns the value of *this after incrementing.
+                 * 
+                 * @return The state of the iterator after incrementing.
+                 */
+                Iterator& operator++();
 
-        ////Matrix* operator->() const;
-        DataSet* operator->() const;
+                /**
+                 * @brief Increases index by 1.
+                 * 
+                 * Increases index by 1 (wraps around if needed) and returns the value of *this before incrementing.
+                 * 
+                 * @return The state of the iterator before incrementing.
+                 */
+                Iterator operator++(int);
 
-        DataLoader(const DataLoader&) = delete;
-        DataLoader& operator=(const DataLoader&) = delete;
+                /**
+                 * @brief Checks if iterator is equal to another.
+                 * 
+                 * Checks if loader pointers and index are equal.
+                 * 
+                 * @param other A const reference to a different iterator.
+                 * @return True if they are equal, false otherwise.
+                 */
+                bool operator==(const Iterator& other) const;
 
-        DataLoader(DataLoader&&) = default;
-        DataLoader& operator=(DataLoader&&) = default;
+                /**
+                 * @brief Checks if iterator is not equal to another.
+                 * 
+                 * Checks if they are equal and inverts result.
+                 * 
+                 * @param other A const reference to a different iterator.
+                 * @return True if they are not equal, false otherwise.
+                 */
+                bool operator!=(const Iterator& other) const;
+        };
+
+        /**
+         * @brief Gets an iterator to the start of the data.
+         * 
+         * Creates a new iterator with the index of 0.
+         * 
+         * @return An iterator pointing to the beginning of batch data.
+         */
+        Iterator Begin();
+
+        /**
+         * @brief Gets an interator the end of the data.
+         * 
+         * Created a new iterator with the index of size of batches.
+         * 
+         * @return An interator pointing to the end of batch data.
+         */
+        Iterator End();
 };
 
 struct Layer {

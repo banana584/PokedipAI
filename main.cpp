@@ -29,6 +29,10 @@ class MyDataSet : public DataSet {
             return std::make_unique<MyDataSet>();
         }
 
+        std::unique_ptr<DataSet> Clone() const override {
+            return std::make_unique<MyDataSet>(*this);
+        }
+
         ~MyDataSet() override {
             return;
         }
