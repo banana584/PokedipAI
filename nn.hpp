@@ -489,14 +489,34 @@ class DataLoader {
         Iterator End();
 };
 
+/**
+ * @struct Layer
+ * @brief A singular layer inside a neural network
+ * 
+ * Contains weights and biases, additionally contains pointers to prev and next layers in the linked list.
+ */
 struct Layer {
+    // The weights used for forward pass
     Matrix weights;
     size_t num_weights;
+    // The biases used for forward pass
     Matrix biases;
 
+    // Pointers for linked list
     Layer* next;
     Layer* prev;
 
+    /**
+     * @brief Constructor.
+     * 
+     * Assignes weights, biases and pointers.
+     * 
+     * @param weights A matrix about the weights used in forward passes.
+     * @param num_weights The amount of weights in this layer.
+     * @param biases The bias added to each node after weighted sum is calculated.
+     * @param next A pointer to the next layer in the linked list.
+     * @param prev A pointer to the previous layer in the linked list.
+     */
     Layer(Matrix& weights, size_t num_weights, Matrix& biases, Layer* next, Layer* prev) {
         this->weights = weights;
         this->num_weights = num_weights;
