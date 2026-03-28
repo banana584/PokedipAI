@@ -18,4 +18,6 @@ target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE
     -Wextra
     -Werror
     -Wpedantic
+    -g
+    -O0
 )

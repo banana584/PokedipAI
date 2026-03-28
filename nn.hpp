@@ -2,6 +2,11 @@
 
 #include <iostream>
 #include <cmath>
+#include <vector>
+#include <random>
+#include <tuple>
+#include <memory>
+#include <cassert>
 
 /**
  * @class Matrix
@@ -12,8 +17,8 @@
 class Matrix {
     protected:
         // Size of 2D array.
-        size_t width;
-        size_t height;
+        size_t rows;
+        size_t cols;
         // 1D matrix allocated using new/delete.
         double* data;
 
@@ -32,7 +37,7 @@ class Matrix {
         /**
          * @brief Checks if 2 matrices have the same dimensions.
          * 
-         * This checks if width and height are exactly the same between 2 matrices.
+         * This checks if cols and rows are exactly the same between 2 matrices.
          * 
          * @param other The other matrix to compare sizes with this.
          * @return True if the sizes are equal, False if they are different.
@@ -43,12 +48,12 @@ class Matrix {
         /**
          * @brief Constructor that creates data.
          * 
-         * This dynamically allocates the data array, of size width * height, and initialises it to be all 0.
+         * This dynamically allocates the data array, of size cols * rows, and initialises it to be all 0.
          * 
-         * @param width The width of the 2D array.
-         * @param height The height of the 2D array.
+         * @param cols The cols of the 2D array.
+         * @param rows The rows of the 2D array.
          */
-        Matrix(size_t width, size_t height);
+        Matrix(size_t rows, size_t cols);
 
         /**
          * @brief Copy constructor
@@ -58,6 +63,10 @@ class Matrix {
          * @param other A different matrix to copy into this.
          */
         Matrix(Matrix& other);
+
+        Matrix(const Matrix& other);
+
+        Matrix();
 
         /**
          * @brief Destructor that destroyes class.
@@ -89,6 +98,8 @@ class Matrix {
          */
         void Set(size_t row, size_t col, double data);
 
+        Matrix Transpose() const;
+
         /**
          * @brief Helper function to print the data in the matrix.
          * 
@@ -97,22 +108,22 @@ class Matrix {
         void Print() const;
 
         /**
-         * @brief Helper function to get width.
+         * @brief Helper function to get cols.
          * 
-         * Returns the value of width.
+         * Returns the value of cols.
          * 
-         * @return The width of the matrix.
+         * @return The cols of the matrix.
          */
-        size_t Width() const noexcept;
+        size_t Cols() const noexcept;
 
         /**
-         * @brief Helper function to get height.
+         * @brief Helper function to get rows.
          * 
-         * Returns the value of height.
+         * Returns the value of rows.
          * 
-         * @return The height of the matrix.
+         * @return The rows of the matrix.
          */
-        size_t Height() const noexcept;
+        size_t Rows() const noexcept;
 
         /**
          * @brief Adds 2 matrices.
@@ -149,10 +160,10 @@ class Matrix {
          * 
          * This multiplies each number in a matrix by a scalar and returns the result (Aₓᵧ * n where n is a constant scalar, col and row are indicies).
          * 
-         * @param other A const reference to a scalar.
+         * @param other A const scalar.
          * @return A new matrix which is the result of this multiplied by a scalar - other.
          */
-        Matrix operator*(const double& other) const;
+        Matrix operator*(const double other) const;
 
         /**
          * @brief Copy operator for matrices.
@@ -163,4 +174,119 @@ class Matrix {
          * @return The new data copied, a reference to this.
          */
         Matrix& operator=(const Matrix& other);
+
+        Matrix(Matrix&& other) noexcept;
+
+        Matrix& operator=(Matrix&& other) noexcept;
+
+        bool operator==(const Matrix& other) const;
+};
+
+class DataSet {
+    public:
+        DataSet() {X = std::vector<Matrix>(); Y = std::vector<Matrix>();};
+
+        DataSet(const Matrix& X, const Matrix& Y) : X({X}), Y({Y}) {};
+
+        virtual void Copy(Matrix* X, Matrix* Y) = 0;
+
+        virtual void Copy(std::vector<Matrix>& X, std::vector<Matrix>& Y) = 0;
+
+        virtual void Copy(DataSet& other) = 0;
+
+        virtual std::unique_ptr<DataSet> CloneEmpty() const = 0;
+
+        virtual ~DataSet() = 0;
+
+        virtual void AddSample(Matrix& X, Matrix& Y) = 0;
+
+        virtual size_t Size() const = 0;
+
+        virtual std::tuple<Matrix, Matrix> Get(size_t index) const = 0;
+
+        virtual std::vector<Matrix> GetX() const = 0;
+
+        virtual std::vector<Matrix> GetY() const = 0;
+
+        virtual std::tuple<std::vector<Matrix>, std::vector<Matrix>> ToVector() const = 0;
+    
+    protected:
+        std::vector<Matrix> X;
+        std::vector<Matrix> Y;
+};
+
+class DataLoader {
+    protected:
+        DataSet* data;
+        std::vector<std::unique_ptr<DataSet>> batches;
+        size_t num_batches;
+        size_t batch_size;
+        size_t idx;
+        bool shuffle;
+    
+    public:
+        DataLoader(DataSet* data, size_t num_batches, bool shuffle);
+
+        std::tuple<Matrix, Matrix> operator*() const;
+
+        DataLoader& operator++();
+
+        DataLoader operator++(int) = delete;
+
+        bool operator==(const DataLoader& other) const;
+
+        bool operator!=(const DataLoader& other) const;
+
+        ////Matrix* operator->() const;
+        DataSet* operator->() const;
+
+        DataLoader(const DataLoader&) = delete;
+        DataLoader& operator=(const DataLoader&) = delete;
+
+        DataLoader(DataLoader&&) = default;
+        DataLoader& operator=(DataLoader&&) = default;
+};
+
+struct Layer {
+    Matrix weights;
+    size_t num_weights;
+    Matrix biases;
+
+    Layer* next;
+    Layer* prev;
+
+    Layer(Matrix& weights, size_t num_weights, Matrix& biases, Layer* next, Layer* prev) {
+        this->weights = weights;
+        this->num_weights = num_weights;
+        this->biases = biases;
+        this->next = next;
+        this->prev = prev;
+    }
+};
+
+class NN {
+    protected:
+        Layer* head;
+        size_t num_layers;
+        size_t inputs;
+        size_t outputs;
+        static std::mt19937 gen;
+
+    protected:
+        inline double Sigmoid(double x) const;
+
+        inline double SigmoidDeriv(double x) const;
+
+        inline double Error(Matrix output, Matrix target) const;
+    
+    public:
+        NN(size_t inputs, size_t outputs, size_t num_layers, std::vector<size_t> num_neurons);
+
+        ~NN();
+
+        std::vector<double> Forward(const std::vector<double>& inputs) const;
+
+        double Backward(const std::vector<double>& inputs, const std::vector<double>& targets, double lr);
+
+        void Train(size_t epochs, double lr, DataLoader& loader);
 };
