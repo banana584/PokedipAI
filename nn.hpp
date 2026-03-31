@@ -1672,49 +1672,123 @@ class Vector {
             return size;
         }
 
+        /**
+         * @class Iterator
+         * @brief Iterator for vector.
+         * 
+         * Provides iteration access for vector class.
+         */
         class Iterator {
             protected:
+                // Pointer to owner
                 Vector<T>* vec;
+                // Current index
                 size_t idx;
 
             public:
+                /**
+                 * @brief Constructor.
+                 * 
+                 * Initializes values in iterator.
+                 * 
+                 * @param vec A pointer to the owner of the iterator.
+                 * @param index The start index of the iterator.
+                 */
                 Iterator(Vector<T>* vec, size_t index) noexcept {
                     this->vec = vec;
                     this->idx = index;
                 }
 
+                /**
+                 * @brief Dereference operator.
+                 * 
+                 * Gets the value of the item at the current index.
+                 * 
+                 * @return The item at the current index.
+                 */
                 const T& operator*() const {
                     return *(vec[idx]);
                 }
 
+                /**
+                 * @brief Arrow operator.
+                 * 
+                 * Gets a pointer to the item at the current index.
+                 * 
+                 * @return A pointer to the item at the current index.
+                 */
                 T* operator->() const {
                     return vec[idx];
                 }
 
+                /**
+                 * @brief Increment operator.
+                 * 
+                 * Increases index by 1.
+                 * 
+                 * @return This after index is increased by 1.
+                 */
                 Iterator& operator++() noexcept {
                     idx = idx + 1;
                     return *this;
                 }
 
+                /**
+                 * @brief Post-increment operator.
+                 * 
+                 * Increases index by 1.
+                 * 
+                 * @return This before index is increased by 1.
+                 */
                 Iterator operator++(int) noexcept {
                     Iterator tmp = *this;
                     ++(*this);
                     return tmp;
                 }
 
+                /**
+                 * @brief Equality operator.
+                 * 
+                 * Checks if 2 iterators are equal.
+                 * 
+                 * @param other A different iterator to compare to this.
+                 * @return True if they are equal, otherwise false.
+                 */
                 bool operator==(const Iterator& other) const noexcept {
                     return vec == other.vec && idx == other.idx;
                 }
 
+                /**
+                 * @brief Inequality operator.
+                 * 
+                 * Checks if 2 iterators are not equal.
+                 * 
+                 * @param other A different iterator to compare to this.
+                 * @return True if they are not equal, otherwise false.
+                 */
                 bool operator!=(const Iterator& other) const noexcept {
                     return !(*this == other);
                 }
         };
 
+        /**
+         * @brief Gets an iterator to the beginning of components.
+         * 
+         * Returns an iterator to the beginning of components.
+         * 
+         * @return An iterator to the beginning of components.
+         */
         Iterator Begin() noexcept {
             return Iterator(this, 0);
         }
 
+        /**
+         * @brief Gets an iterator to the end of components.
+         * 
+         * Returns an iterator to the end of components.
+         * 
+         * @return An iterator to the end of components.
+         */
         Iterator End() noexcept {
             return Iterator(this, size);
         }
