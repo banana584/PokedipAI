@@ -1672,7 +1672,52 @@ class Vector {
             return size;
         }
 
-        // TODO: iterator
+        class Iterator {
+            protected:
+                Vector<T>* vec;
+                size_t idx;
+
+            public:
+                Iterator(Vector<T>* vec, size_t index) noexcept {
+                    this->vec = vec;
+                    this->idx = index;
+                }
+
+                const T& operator*() const {
+                    return *(vec[idx]);
+                }
+
+                T* operator->() const {
+                    return vec[idx];
+                }
+
+                Iterator& operator++() noexcept {
+                    idx = idx + 1;
+                    return *this;
+                }
+
+                Iterator operator++(int) noexcept {
+                    Iterator tmp = *this;
+                    ++(*this);
+                    return tmp;
+                }
+
+                bool operator==(const Iterator& other) const noexcept {
+                    return vec == other.vec && idx == other.idx;
+                }
+
+                bool operator!=(const Iterator& other) const noexcept {
+                    return !(*this == other);
+                }
+        };
+
+        Iterator Begin() noexcept {
+            return Iterator(this, 0);
+        }
+
+        Iterator End() noexcept {
+            return Iterator(this, size);
+        }
 
         /**
          * @brief Gets an element at an index.
@@ -2627,7 +2672,7 @@ class DataLoader {
                  * @param loader The original loader to get data from.
                  * @param index The starting index the iterator is at.
                  */
-                Iterator(DataLoader* loader, size_t index);
+                Iterator(DataLoader* loader, size_t index) noexcept;
 
                 /**
                  * @brief Dereferences to get current batch
@@ -2654,7 +2699,7 @@ class DataLoader {
                  * 
                  * @return The state of the iterator after incrementing.
                  */
-                Iterator& operator++();
+                Iterator& operator++() noexcept;
 
                 /**
                  * @brief Increases index by 1.
@@ -2663,7 +2708,7 @@ class DataLoader {
                  * 
                  * @return The state of the iterator before incrementing.
                  */
-                Iterator operator++(int);
+                Iterator operator++(int) noexcept;
 
                 /**
                  * @brief Checks if iterator is equal to another.
@@ -2673,7 +2718,7 @@ class DataLoader {
                  * @param other A const reference to a different iterator.
                  * @return True if they are equal, false otherwise.
                  */
-                bool operator==(const Iterator& other) const;
+                bool operator==(const Iterator& other) const noexcept;
 
                 /**
                  * @brief Checks if iterator is not equal to another.
@@ -2683,7 +2728,7 @@ class DataLoader {
                  * @param other A const reference to a different iterator.
                  * @return True if they are not equal, false otherwise.
                  */
-                bool operator!=(const Iterator& other) const;
+                bool operator!=(const Iterator& other) const noexcept;
         };
 
         /**
@@ -2693,7 +2738,7 @@ class DataLoader {
          * 
          * @return An iterator pointing to the beginning of batch data.
          */
-        Iterator Begin();
+        Iterator Begin() noexcept;
 
         /**
          * @brief Gets an interator the end of the data.
@@ -2702,7 +2747,7 @@ class DataLoader {
          * 
          * @return An interator pointing to the end of batch data.
          */
-        Iterator End();
+        Iterator End() noexcept;
 };
 
 /**

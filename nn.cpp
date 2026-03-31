@@ -61,15 +61,15 @@ DataLoader::DataLoader(DataSet* data, size_t num_batches, bool shuffle) : num_ba
     }
 }
 
-DataLoader::Iterator DataLoader::Begin() {
+DataLoader::Iterator DataLoader::Begin() noexcept {
     return Iterator(this, 0);
 }
 
-DataLoader::Iterator DataLoader::End() {
+DataLoader::Iterator DataLoader::End() noexcept {
     return Iterator(this, batches.size());
 }
 
-DataLoader::Iterator::Iterator(DataLoader* loader, size_t index) {
+DataLoader::Iterator::Iterator(DataLoader* loader, size_t index) noexcept {
     this->loader = loader;
     this->idx = index;
 }
@@ -82,22 +82,22 @@ DataSet* DataLoader::Iterator::operator->() const {
     return loader->batches[idx].get();
 }
 
-DataLoader::Iterator& DataLoader::Iterator::operator++() {
+DataLoader::Iterator& DataLoader::Iterator::operator++() noexcept {
     idx = (idx + 1) % loader->batches.size();
     return *this;
 }
 
-DataLoader::Iterator DataLoader::Iterator::operator++(int) {
+DataLoader::Iterator DataLoader::Iterator::operator++(int) noexcept  {
     Iterator tmp = *this;
     ++(*this);
     return tmp;
 }
 
-bool DataLoader::Iterator::operator==(const Iterator& other) const {
+bool DataLoader::Iterator::operator==(const Iterator& other) const noexcept {
     return loader == other.loader && idx == other.idx;
 }
 
-bool DataLoader::Iterator::operator!=(const Iterator& other) const {
+bool DataLoader::Iterator::operator!=(const Iterator& other) const noexcept {
     return !(*this == other);
 }
 
