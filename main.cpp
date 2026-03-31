@@ -3,6 +3,8 @@
 #include <vector>
 #include <cmath>
 #include <iostream>
+#include <fstream>
+#include <sstream>
 
 class MyDataSet : public DataSet {
     public:
@@ -90,8 +92,45 @@ class MyDataSet : public DataSet {
         }
 };
 
+GLuint compileShader(GLenum type, const char* source)
+{
+    GLuint shader = glCreateShader(type);
+
+    glShaderSource(shader, 1, &source, nullptr);
+    glCompileShader(shader);
+
+    int success;
+    glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
+
+    if(!success)
+    {
+        char info[512];
+        glGetShaderInfoLog(shader, 512, nullptr, info);
+        std::cout << "Shader error:\n" << info << std::endl;
+    }
+
+    return shader;
+}
+
+GLuint createComputeProgram(const char* path)
+{
+    std::string src = ReadFile(path);
+    const char* code = src.c_str();
+
+    GLuint shader = glCreateShader(GL_COMPUTE_SHADER);
+    glShaderSource(shader, 1, &code, nullptr);
+    glCompileShader(shader);
+
+    GLuint program = glCreateProgram();
+    glAttachShader(program, shader);
+    glLinkProgram(program);
+
+    glDeleteShader(shader);
+    return program;
+}
 
 int main() {
+    /*
     // XOR dataset: 4 examples, 2 inputs each
     Matrix data(4, 2);
     Matrix targets(4, 2);
@@ -113,7 +152,7 @@ int main() {
 
     // Neural network: 2 inputs, 2 outputs, 1 hidden layer with 5 neurons
     std::vector<size_t> neurons = {5, 2};
-    NN nn(2, 2, 2, neurons);  // inputs=2, outputs=1, num_layers=2 (hidden+output)
+    NN nn(2, 2, 2, neurons);  // inputs=2, outputs=2, num_layers=2 (hidden+output)
     // Train
     nn.Train(100000, 0.1, loader); // 5000 epochs, lr=0.01
 
@@ -128,6 +167,60 @@ int main() {
         size_t idx = static_cast<size_t>(std::distance(output.begin(), max));
         std::cout << input[0] << " XOR " << input[1] << " = " << 1 - idx << "\n";
     }
+
+    return 0;
+    */
+
+    glfwInit();
+
+    GLFWwindow* window =
+        glfwCreateWindow(1,1,"OpenGL",NULL,NULL);
+
+    glfwMakeContextCurrent(window);
+
+    // IMPORTANT: initialize GLEW AFTER context
+    glewExperimental = GL_TRUE;
+    if (glewInit() != GLEW_OK)
+    {
+        std::cout << "GLEW failed\n";
+        return -1;
+    }
+
+    std::vector<float> data = {1, 2, 3, 4, 5};
+
+    GLuint ssbo;
+    glGenBuffers(1, &ssbo);
+
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
+
+    glBufferData(GL_SHADER_STORAGE_BUFFER,
+                 data.size() * sizeof(float),
+                 data.data(),
+                 GL_DYNAMIC_COPY);
+
+    // bind to binding = 0 in shader
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssbo);
+
+    GLuint program = createComputeProgram("compute.glsl");
+
+    glUseProgram(program);
+
+    // launch 5 GPU threads
+    glDispatchCompute(data.size(), 1, 1);
+
+    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
+
+    float* ptr = (float*)glMapBuffer(
+        GL_SHADER_STORAGE_BUFFER,
+        GL_READ_ONLY
+    );
+
+    for(size_t i = 0; i < data.size(); i++)
+        std::cout << ptr[i] << std::endl;
+
+    glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 
     return 0;
 }

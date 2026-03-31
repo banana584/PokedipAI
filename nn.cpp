@@ -2,6 +2,13 @@
 
 std::mt19937 NN::gen{std::random_device{}()};
 
+std::string ReadFile(const char* path) {
+    std::ifstream file(path);
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    return buffer.str();
+}
+
 Matrix::Matrix(size_t rows, size_t cols) : rows(rows), cols(cols) {
     data = new double[rows * cols]{};
 }
@@ -202,9 +209,6 @@ DataLoader::DataLoader(DataSet* data, size_t num_batches, bool shuffle) : num_ba
 
         size_t end = std::min(start + batch_size, total);
 
-        assert(start <= end);
-        assert(end <= total);
-
         std::vector<Matrix> subX(Xvec.begin() + start, Xvec.begin() + end);
 
         std::vector<Matrix> subY(Yvec.begin() + start, Yvec.begin() + end);
@@ -256,34 +260,6 @@ bool DataLoader::Iterator::operator==(const Iterator& other) const {
 bool DataLoader::Iterator::operator!=(const Iterator& other) const {
     return !(*this == other);
 }
-
-/*
-std::tuple<Matrix, Matrix> DataLoader::operator*() const {
-    std::tuple<std::vector<Matrix>, std::vector<Matrix>> vec = batches.at(idx)->ToVector();
-
-    Matrix data_X = std::get<0>(vec).at(0);
-    Matrix data_Y = std::get<1>(vec).at(0);
-
-    return std::make_tuple(data_X, data_Y);
-}
-
-DataLoader& DataLoader::operator++() {
-    idx = (idx + 1) % num_batches;
-    return *this;
-}
-
-bool DataLoader::operator==(const DataLoader& other) const {
-    return idx == other.idx;
-}
-
-bool DataLoader::operator!=(const DataLoader& other) const {
-    return !(*this == other);
-}
-
-DataSet* DataLoader::operator->() const {
-    return batches[idx].get();
-}
-*/
 
 NN::NN(size_t inputs, size_t outputs, size_t num_layers, std::vector<size_t> num_neurons) {
     this->inputs = inputs;
@@ -347,21 +323,17 @@ inline double NN::Sigmoid(double x) const {
     return 1 / (1 + exp(-x));
 }
 
-inline double NN::SigmoidDeriv(double x) const {
-    return Sigmoid(x) * (1 - Sigmoid(x));
-}
-
-inline double NN::Error(Matrix output, Matrix target) const {
+inline double NN::MSEError(Matrix output, Matrix target) const {
     Matrix diff = output - target;
 
     double sum = 0.0;
-    for (size_t i = 0; i < diff.Cols(); i++) {
-        for (size_t j = 0; j < diff.Rows(); j++) {
-            sum += diff.Get(i, j);
+    for (size_t row = 0; row < diff.Rows(); row++) {
+        for (size_t col = 0; col < diff.Cols(); col++) {
+            sum += diff.Get(row, col) * diff.Get(row, col);
         }
     }
 
-    return pow(sum, 2);
+    return sum;
 }
 
 std::vector<double> NN::Forward(const std::vector<double>& inputs) const {
@@ -434,10 +406,7 @@ double NN::Backward(const std::vector<double>& inputs, const std::vector<double>
     }
 
     Matrix diff = output - target_matrix;
-    double loss = 0.0;
-    for (size_t row = 0; row < diff.Rows(); row++)
-        for (size_t col = 0; col < diff.Cols(); col++)
-            loss += diff.Get(row, col) * diff.Get(row, col);
+    double loss = MSEError(output, target_matrix);
 
     // Backwards pass 
     Matrix dprev = diff; // gradient of loss w.r.t output
@@ -497,7 +466,6 @@ void NN::Train(size_t epochs, double lr, DataLoader& loader) {
         double loss = 0.0;
 
         auto ptr = it.operator->();
-        assert(ptr != nullptr);
         auto data = ptr->Clone();
         std::tuple<std::vector<Matrix>, std::vector<Matrix>> tuple = data->ToVector();
         Matrix X = std::get<0>(tuple)[0];
