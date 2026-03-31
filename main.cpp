@@ -12,12 +12,12 @@ class MyDataSet : public DataSet {
             return;
         }
 
-        void Copy(Matrix* X, Matrix* Y) override {
-            this->X = std::vector<Matrix>{*X};
-            this->Y = std::vector<Matrix>{*Y};
+        void Copy(Matrix<double>* X, Matrix<double>* Y) override {
+            this->X = std::vector<Matrix<double>>{*X};
+            this->Y = std::vector<Matrix<double>>{*Y};
         }
 
-        void Copy(std::vector<Matrix>& X, std::vector<Matrix>& Y) override {
+        void Copy(std::vector<Matrix<double>>& X, std::vector<Matrix<double>>& Y) override {
             this->X = X;
             this->Y = Y;
         }
@@ -39,7 +39,7 @@ class MyDataSet : public DataSet {
             return;
         }
 
-        void AddSample(Matrix& X, Matrix& Y) override {
+        void AddSample(Matrix<double>& X, Matrix<double>& Y) override {
             this->X.push_back(X);
             this->Y.push_back(Y);
         }
@@ -48,32 +48,32 @@ class MyDataSet : public DataSet {
             return X[0].Rows();
         }
 
-        std::tuple<Matrix, Matrix> Get(size_t index) const override {
+        std::tuple<Matrix<double>, Matrix<double>> Get(size_t index) const override {
             return std::make_tuple(X.at(index), Y.at(index));
         }
 
-        std::vector<Matrix> GetX() const override {
+        std::vector<Matrix<double>> GetX() const override {
             return X;
         }
 
-        std::vector<Matrix> GetY() const override {
+        std::vector<Matrix<double>> GetY() const override {
             return Y;
         }
 
-        std::tuple<std::vector<Matrix>, std::vector<Matrix>> ToVector() const override {
-            std::vector<Matrix> X_vec;
-            std::vector<Matrix> Y_vec;
+        std::tuple<std::vector<Matrix<double>>, std::vector<Matrix<double>>> ToVector() const override {
+            std::vector<Matrix<double>> X_vec;
+            std::vector<Matrix<double>> Y_vec;
 
             // Loop over all matrices in X and Y
             for (size_t i = 0; i < X.size(); i++) {
-                const Matrix& x_mat = X[i];
-                const Matrix& y_mat = Y[i];
+                const Matrix<double>& x_mat = X[i];
+                const Matrix<double>& y_mat = Y[i];
 
                 // Split x_mat into individual rows
                 for (size_t row = 0; row < x_mat.Rows(); row++) {
                     // Each row becomes a 1×cols matrix
-                    Matrix x_row(1, x_mat.Cols());
-                    Matrix y_row(1, y_mat.Cols());
+                    Matrix<double> x_row(1, x_mat.Cols());
+                    Matrix<double> y_row(1, y_mat.Cols());
 
                     for (size_t col = 0; col < x_mat.Cols(); col++) {
                         x_row.Set(0, col, x_mat.Get(row, col));

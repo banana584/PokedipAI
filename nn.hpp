@@ -8,10 +8,17 @@
 #include <utility>
 #include <memory>
 #include <unordered_map>
+#include <initializer_list>
 #include <fstream>
 #include <sstream>
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
+
+template <typename T>
+class Matrix;
+
+template <typename T>
+class Vector;
 
 /**
  * @brief Reads a file and returns the contents.
@@ -800,118 +807,6 @@ enum class ShaderProgramPurpose {
 };
 
 /**
- * @struct Vec3
- * @brief Representation of 3D vector.
- * 
- * Has 3 float components: x, y, and z.
- */
-struct Vec3 {
-    float x; // X component
-    float y; // Y component
-    float z; // Z component
-
-    /**
-     * @brief Default constructor.
-     * 
-     * Initializes all components to 0.
-     */
-    Vec3() {
-        this->x = 0.0f;
-        this->y = 0.0f;
-        this->z = 0.0f;
-    }
-
-    /**
-     * @brief Constructor.
-     * 
-     * Initializes all components.
-     * 
-     * @param x The x component.
-     * @param y The y component.
-     * @param z The z component.
-     */
-    Vec3(float x, float y, float z) {
-        this->x = x;
-        this->y = y;
-        this->z = z;
-    }
-};
-
-/**
- * @struct Mat4
- * @brief Representation of 4x4 matrix.
- * 
- * Has a 4x4 float array, leading to 16 total float values.
- */
-struct Mat4 {
-    float data[16]; // 4x4 matrix
-
-    /**
-     * @brief Constructor.
-     * 
-     * Intializes values to 0.0.
-     */
-    Mat4() {
-        for (int i = 0; i < 16; i++) {
-            data[i] = 0.0f;
-        }
-    }
-
-    /**
-     * @brief Returns identity matrix.
-     * 
-     * Returns a matrix that when used for transformations no changes are applied.
-     * 
-     * @return The identity matrix.
-     */
-    static Mat4 Identity() {
-        Mat4 m;
-        m(0,0)=1;
-        m(1,1)=1;
-        m(2,2)=1;
-        m(3,3)=1;
-        return m;
-    }
-
-    /**
-     * @brief Get operator.
-     * 
-     * Gets a float value at col,row.
-     * 
-     * @param col The col to get data at.
-     * @param row The row to get data at.
-     * @return A reference to the data at col,row.
-     */
-    float& operator()(int column, int row) {
-        return data[column * 4 + row];
-    }
-
-    /**
-     * @brief Get operator.
-     * 
-     * Gets a const float at col,row.
-     * 
-     * @param col The col to get data at.
-     * @param row The row to get data at.
-     * @return A const reference to the data at col,row.
-     */
-    const float& operator()(int column, int row) const {
-        return data[column * 4 + row];
-    }
-
-    /**
-     * @brief Pointer get function.
-     * 
-     * Gets the raw data for usage.
-     * 
-     * @return The raw data in the mat4.
-     */
-    const float* ptr() const {
-        return data;
-    }
-};
-
-/**
  * @class ShaderProgram
  * @brief Generic representation of a shader program.
  * 
@@ -1147,24 +1042,24 @@ class ShaderProgram {
         virtual void SetFloat(const char* name, float value) = 0;
 
         /**
-         * @brief Sets a uniform in the shader to a vector3 value.
+         * @brief Sets a uniform in the shader to a vector value.
          * 
-         * A pure virtual function whose implementation should set a uniform in shaders to a vector3 value.
+         * A pure virtual function whose implementation should set a uniform in shaders to a vector value.
          * 
          * @param name The name of the uniform being set.
          * @param value The values being set to the uniform.
          */
-        virtual void SetVec3(const char* name, Vec3& value) = 0;
+        virtual void SetVec(const char* name, Vector<float>& value) = 0;
 
         /**
-         * @brief Sets a uniform in the shader to a matrix4 value.
+         * @brief Sets a uniform in the shader to a matrix value.
          * 
-         * A pure virtual function whose implementation should set a uniform in shaders to a matrix4 value.
+         * A pure virtual function whose implementation should set a uniform in shaders to a matrix value.
          * 
          * @param name The name of the uniform being set.
          * @param value The values being set to the uniform.
          */
-        virtual void SetMat4(const char* name, Mat4& value) = 0;
+        virtual void SetMat(const char* name, Matrix<float>& value) = 0;
 
         /**
          * @brief Dispatches tasks to run in parallel.
@@ -1656,18 +1551,499 @@ class GraphicsAPIContext {
 };
 
 /**
+ * @class Vector
+ * @brief Represents a vector of any size.
+ * 
+ * Vector class - physics vector not container - that supports any number of components.
+ */
+template <typename T>
+class Vector {
+    protected:
+        // Amount of components
+        size_t size;
+        // Dynamic component array
+        T* data;
+
+    protected:
+        /**
+         * @brief Checks if 2 vectors have equal size.
+         * 
+         * Compares 2 vectors for equal sizes.
+         * 
+         * @param other A const reference to another vector to check against this.
+         * @return True if sizes are equal, otherwise false.
+         */
+        bool CheckSize(const Vector<T>& other) const noexcept {
+            return this->size == other.size;
+        }
+
+    public:
+        /**
+         * @brief Constructor.
+         * 
+         * Initializes dynamic array from std::vector.
+         * 
+         * @param data An std::vector of the components we want.
+         */
+        Vector(std::vector<T> data) noexcept {
+            this->size = data.size();
+
+            this->data = new T[this->size];
+            std::copy(data.begin(), data.end(), this->data);
+        }
+
+        /**
+         * @brief Constructor.
+         * 
+         * Intializes dynamic array from initializer list.
+         * 
+         * @param data An std::initializer_list of the components we want.
+         */
+        Vector(std::initializer_list<T> data) {
+            this->size = data.size();
+
+            this->data = new T[this->size];
+            std::copy(data.begin(), data.end(), this->data);
+        }
+
+        /**
+         * @brief Default constructor.
+         * 
+         * Initializes items to 0.
+         */
+        Vector() noexcept {
+            this->size = 0;
+            // Make sure we do not accidentally delete nullptr.
+            this->data = new T[1]{};
+        }
+
+        /**
+         * @brief Copy constructor.
+         * 
+         * Deep copies data from another vector.
+         * 
+         * @param other Another vector whose data will be copied.
+         */
+        Vector(const Vector<T>& other) noexcept {
+            this->size = other.size;
+            this->data = new T[this->size];
+            std::copy(other.data, other.data + other.size, this->data);
+        }
+
+        /**
+         * @brief Move constructor.
+         * 
+         * Moves data from another vector to create a new one.
+         * 
+         * @param other Another vector whose data will be moved.
+         */
+        Vector(Vector<T>&& other) noexcept {
+            this->size = other.size;
+            this->data = new T[this->size];
+            std::copy(other.data, other.data + other.size, this->data);
+
+            other.size = 0;
+            delete[] other.data;
+            other.data = nullptr;
+        }
+
+        /**
+         * @brief Prints all values in vector.
+         * 
+         * Prints the values in vector, with the format of leaving a space inbetween each element.
+         */
+        void Print() const noexcept {
+            for (size_t i = 0; i < size; i++) {
+                std::cout << i << " ";
+            }
+            std::cout << "\n";
+        }
+
+        /**
+         * @brief Helper function to get size.
+         * @warning Is not mathemetical, see Length() for the mathematical length of vector.
+         * 
+         * Gets the amount of components.
+         * 
+         * @return Amount of components in vector.
+         */
+        size_t Size() const noexcept {
+            return size;
+        }
+
+        // TODO: iterator
+
+        /**
+         * @brief Gets an element at an index.
+         * 
+         * Checks for out of bounds index, before retrieving element at index.
+         * 
+         * @param index The index to get element at.
+         * @return The element at the requested index.
+         */
+        T Get(size_t index) const {
+            if (index > size) {
+                throw std::out_of_range("Index out of range");
+            }
+            return data[index];
+        }
+
+        /**
+         * @brief Sets an element at an index.
+         * 
+         * Checks for out of bounds index, before setting element at index.
+         * 
+         * @param index The index to set element at.
+         * @param data The data to set at the element.
+         */
+        void Set(size_t index, T& data) {
+            if (index > size) {
+                throw std::out_of_range("Index out of range");
+            }
+            data[index] = data;
+        }
+
+        /**
+         * @brief Addition operator.
+         * 
+         * Adds each element in 2 vectors together.
+         * 
+         * @param other Another vector to add to this.
+         * @return A new vector with the added values.
+         */
+        Vector<T>& operator+(const Vector<T>& other) const {
+            if (!CheckSize(other)) {
+                throw std::runtime_error("Sizes do not match");
+            }
+
+            Vector<T> new_vec(size);
+
+            for (size_t i = 0; i < size; i++) {
+                new_vec.Set(i, data[i] + other.data[i]);
+            }
+
+            return new_vec;
+        }
+
+        /**
+         * @brief Subtraction operator.
+         * 
+         * Subtracts each element in 2 vectors together.
+         * 
+         * @param other Another vector to subtract from this.
+         * @return A new vector with the subtracted values.
+         */
+        Vector<T>& operator-(const Vector<T>& other) const {
+            if (!CheckSize(other)) {
+                throw std::runtime_error("Sizes do not match");
+            }
+
+            Vector<T> new_vec(size);
+
+            for (size_t i = 0; i < size; i++) {
+                new_vec.Set(i, data[i] - other.data[i]);
+            }
+
+            return new_vec;
+        }
+
+        /**
+         * @brief Dot product.
+         * 
+         * Multiplies each element in 2 vectors together and sums them.
+         * 
+         * @param other Another vector to use in the dot product.
+         * @return The sum of multiplied values.
+         */
+        T& operator*(const Vector<T>& other) const {
+            if (!CheckSize(other)) {
+                throw std::runtime_error("Sizes do not match");
+            }
+
+            T sum = T();
+
+            for (size_t i = 0; i < size; i++) {
+                sum += data[i] * other.data[i];
+            }
+
+            return sum;
+        }
+
+        /**
+         * @brief Scalar multiplication.
+         * 
+         * Multiplies each element by a constant scalar.
+         * 
+         * @param scalar The scalar to multiply each element by.
+         * @return The vector with the newly multiplied components.
+         */
+        Vector<T>& operator*(const double scalar) const noexcept {
+            Vector<T> new_vec(size);
+
+            for (size_t i = 0; i < size; i++) {
+                new_vec.Set(i, data[i] * scalar);
+            }
+
+            return new_vec;
+        }
+
+        /**
+         * @brief Scalar division.
+         * 
+         * Divides each element by a constant scalar.
+         * 
+         * @param scalar The scalar to divide each element by.
+         * @return The vector with the newly divided components.
+         */
+        Vector<T>& operator/(const double scalar) const {
+            if (scalar == 0.0) {
+                throw std::invalid_argument("Cannot divide by 0");
+            }
+
+            Vector<T> new_vec(size);
+
+            for (size_t i = 0; i < size; i++) {
+                new_vec.Set(i, data[i] / scalar);
+            }
+
+            return new_vec;
+        }
+
+        /**
+         * @brief Negative operator.
+         * 
+         * Makes each element in the vector negative.
+         * 
+         * @return The vector with each element negative.
+         */
+        Vector<T>& operator-() const noexcept {
+            Vector<T> new_vec(size);
+
+            for (size_t i = 0; i < size; i++) {
+                new_vec.Set(i, -data[i]);
+            }
+
+            return new_vec;
+        }
+
+        /**
+         * @brief Equality operator.
+         * 
+         * Checks if 2 vectors are equal.
+         * 
+         * @param other A different vector to compare against this.
+         * @return True if they are equal, otherwise false.
+         */
+        bool operator==(const Vector<T>& other) const noexcept {
+            if (this->size != other.size) {
+                return false;
+            }
+            for (size_t i = 0; i < size; i++) {
+                if (data[i] != other.data[i]) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        /**
+         * @brief Inequality operator.
+         * 
+         * Checks if 2 vectors are not equal.
+         * 
+         * @param other A different vector to compare against this.
+         * @return True if they are not equal, otherwise false.
+         */
+        bool operator!=(const Vector<T>& other) const noexcept {
+            return !(*this == other);
+        }
+
+        /**
+         * @brief Gets the squared length of the vector.
+         * @warning Does not get amount of components, but instead mathematical length.
+         * 
+         * @see Length()
+         * 
+         * Gets the squared mathematical length of the vector, by squaring each element and summing them.
+         * 
+         * @return The squared length of the vector.
+         */
+        size_t LengthSquared() const noexcept {
+            size_t sum = 0;
+            for (size_t i = 0; i < size; i++) {
+                sum += data[i] * data[i];
+            }
+            return sum;
+        }
+
+        /**
+         * @brief Gets the length of the vector.
+         * @warning Does not get amount of components, but instead mathematical length.
+         * 
+         * @see LengthSquared()
+         * 
+         * Gets the mathematical length of the vector, by square rooting the squared length.
+         * 
+         * @return The mathematical length of the vector.
+         */
+        size_t Length() const noexcept {
+            return sqrt(LengthSquared());
+        }
+
+        /**
+         * @brief Gets the normalised vector.
+         * 
+         * Divides each element of the vector by its length, to get the normalised vector.
+         * 
+         * @return The normalised vector.
+         */
+        Vector<T>& Normalised() const noexcept {
+            size_t length = Length();
+            if (length == 0) {
+                Vector<T> new_vec(size);
+                for (size_t i = 0; i < size; i++) {
+                    new_vec.data[i] = 0;
+                }
+                return new_vec;
+            }
+            return *this / length;
+        }
+
+        /**
+         * @brief Gets the cross product of 2 vectors.
+         * 
+         * Gets the cross product of 2 vectors in 3D space.
+         * 
+         * @param other A different 3D vector to get the cross product with.
+         * @return The cross product of this and other.
+         */
+        Vector<T>& Cross(const Vector<T>& other) const {
+            if (size != 3 || other.size != 3) {
+                throw std::invalid_argument("Cross product only works with 3 components");
+            }
+
+            T a1 = data[0]; T a2 = data[1]; T a3 = data[2];
+            T b1 = other.data[0]; T b2 = other.data[1]; T b3 = other.data[3];
+
+            Vector<T> new_vec(size);
+            new_vec.data[0] = a2 * b3 - a3 * b2;
+            new_vec.data[1] = a3 * b1 - a1 * b3;
+            new_vec.data[2] = a1 * b2 - a2 * b1;
+
+            return new_vec;
+        }
+
+        /**
+         * @brief Gets the distance between 2 vectors.
+         * 
+         * Subtracts other from this to get the difference, then finds the length of that.
+         * 
+         * @param other A different vector to find the distance between.
+         * @return The distance between this and other.
+         */
+        size_t Distance(const Vector<T>& other) const {
+            return (*this - other).Length();
+        }
+
+        /**
+         * @brief Blends between 2 vectors based of t.
+         * 
+         * Uses the lerp formula to blend between 2 vectors with t.
+         * 
+         * @param other The target vector this is being blended towards.
+         * @param t The time values for the lerp formula.
+         * @return The current lerped vector.
+         */
+        Vector<T>& Lerp(const Vector<T>& other, double t) const {
+            if (!CheckSize(other)) {
+                throw std::invalid_argument("Sizes must match");
+            }
+            return *this + (other - *this) * t;
+        }
+
+        /**
+         * @brief Copy operator.
+         * 
+         * Copies data from another vector into this.
+         * 
+         * @param other A different vector whose data will be copied.
+         * @return The vector with newly copied data.
+         */
+        Vector<T>& operator=(const Vector<T>& other) noexcept {
+            if (this == &other) return *this;
+
+            this->size = other.size;
+            delete[] this->data;
+            this->data = new T[size];
+            std::copy(other.data, other.data + size, this.data);
+
+            return *this;
+        }
+
+        /**
+         * @brief Move operator.
+         * 
+         * Moves data from another vector into this.
+         * 
+         * @param other A different vector whose data will be moved.
+         * @return The vector with newly moved data.
+         */
+        Vector<T>& operator=(Vector<T>&& other) noexcept {
+            if (this == &other) return *this;
+
+            this->size = other.size;
+            delete[] this->data;
+            this->data = new T[size];
+            std::copy(other.data, other.data + size, this.data);
+
+            other.size = 0;
+            delete[] other.data;
+            other.data = nullptr;
+
+            return *this;
+        }
+
+        /**
+         * @brief Get operator.
+         * @warning Bounds checking is not performed, so indexes must be correct.
+         * 
+         * Gets data at index, does not perform bounds checking.
+         * 
+         * @param index The index to retrieve item at.
+         * @return A reference to the item at index.
+         */
+        T& operator[](const size_t index) {
+            return data[index];
+        }
+
+        /**
+         * @brief Const get operator.
+         * @warning Bounds checking is not performed, so indexes must be correct.
+         * 
+         * Gets data at index, does not perform bounds checking.
+         * 
+         * @param index The index to retrieve item at.
+         * @return A const reference to the item at index.
+         */
+        const T& operator[](const size_t index) const {
+            return data[index];
+        }
+};
+
+/**
  * @class Matrix
  * @brief A class to represent 2D matrices.
  * 
  * A class that is a 2D matrix, but a 1D matrix is used and indices are converted. Supports addition, subtraction, multiplication and scalar multiplication currently.
  */
+template <typename T>
 class Matrix {
     protected:
         // Size of 2D array.
         size_t rows;
         size_t cols;
         // 1D matrix allocated using new/delete.
-        double* data;
+        T* data;
 
     protected:
         /**
@@ -1679,7 +2055,9 @@ class Matrix {
          * @param col The col index.
          * @return The 1D index - from the 2D indices - to be used in the data array.
          */
-        size_t GetIndex(size_t row, size_t col) const;
+        size_t GetIndex(size_t row, size_t col) const {
+            return row * cols + col;
+        }
 
         /**
          * @brief Checks if 2 matrices have the same dimensions.
@@ -1689,7 +2067,9 @@ class Matrix {
          * @param other The other matrix to compare sizes with this.
          * @return True if the sizes are equal, False if they are different.
          */
-        bool CheckSize(const Matrix& other) const;
+        bool CheckSize(const Matrix<T>& other) const {
+            return rows == other.rows && cols == other.cols;
+        }
     
     public:
         /**
@@ -1700,7 +2080,9 @@ class Matrix {
          * @param cols The cols of the 2D array.
          * @param rows The rows of the 2D array.
          */
-        Matrix(size_t rows, size_t cols);
+        Matrix(size_t rows, size_t cols) : rows(rows), cols(cols) {
+            data = new T[rows * cols]{};
+        }
 
         /**
          * @brief Copy constructor
@@ -1709,7 +2091,12 @@ class Matrix {
          * 
          * @param other A reference to a different matrix to copy into this.
          */
-        Matrix(Matrix& other);
+        Matrix(Matrix& other) {
+            this->rows = other.rows;
+            this->cols = other.cols;
+            data = new T[rows * cols];
+            std::copy(other.data, other.data + rows * cols, data);
+        }
 
         /**
          * @brief Copy constructor
@@ -1718,21 +2105,43 @@ class Matrix {
          * 
          * @param other A const reference to a different matrix to copy into this.
          */
-        Matrix(const Matrix& other);
+        Matrix(const Matrix<T>& other) : rows(other.rows), cols(other.cols) {
+            data = new T[rows * cols];
+            std::copy(other.data, other.data + rows * cols, data);
+        }
 
         /**
          * @brief Default constructor
          * 
          * This sets rows and cols to 0, and data to nullptr. Default values for all members.
          */
-        Matrix();
+        Matrix() : rows(0), cols(0), data(nullptr) {}
+
+        /**
+         * @brief Move constructor for matrices.
+         * 
+         * Sets data in new matrix to data in other matrix with a deep copy, and destroys the old matrix.
+         * 
+         * @param other A different matrix to be destroyed and have its data moved into this.
+         */
+        Matrix(Matrix&& other) noexcept : rows(other.rows), cols(other.cols) {
+            this->data = new T[rows * cols];
+            std::copy(other.data, other.data + rows * cols, this->data);
+
+            delete other.data;
+            other.data = nullptr;
+            other.rows = 0;
+            other.cols = 0;
+        }
 
         /**
          * @brief Destructor that destroyes class.
          * 
          * This deallocates the data array with delete.
          */
-        ~Matrix();
+        ~Matrix() {
+            delete[] data;
+        }
 
         /**
          * @brief Gets data from an index.
@@ -1744,7 +2153,13 @@ class Matrix {
          * 
          * @return That data at the requested index.
          */
-        double Get(size_t row, size_t col) const;
+        double Get(size_t row, size_t col) const {
+            if (row >= rows || col >= cols) {
+                throw std::out_of_range("Index out of range");
+            }
+
+            return data[GetIndex(row, col)];
+        }
 
         /**
          * @brief Sets data in array at an index.
@@ -1755,7 +2170,12 @@ class Matrix {
          * @param col The col to set the data at.
          * @param data The data to set at the requested index.
          */
-        void Set(size_t row, size_t col, double data);
+        void Set(size_t row, size_t col, double data) {
+            if (row >= rows || col >= cols)
+                throw std::out_of_range("Index out of range");
+
+            this->data[GetIndex(row, col)] = data;
+        }
 
         /**
          * @brief Performs the transposition of the current matrix. Does not modify data.
@@ -1764,7 +2184,15 @@ class Matrix {
          * 
          * @return The newly created matrix with the transposed data.
          */
-        Matrix Transpose() const;
+        Matrix Transpose() const {
+            Matrix result(cols, rows);
+
+            for (size_t r = 0; r < rows; r++)
+                for (size_t c = 0; c < cols; c++)
+                    result.Set(c, r, Get(r,c));
+
+            return result;
+        }
 
         /**
          * @brief Returns the identity matrix.
@@ -1789,7 +2217,13 @@ class Matrix {
          * 
          * Prints all data in matrix, with 1 space inbetween each item a row and a newline between each row.
          */
-        void Print() const;
+        void Print() const {
+            for (size_t r = 0; r < rows; r++) {
+                for (size_t c = 0; c < cols; c++)
+                    std::cout << Get(r,c) << " ";
+                std::cout << "\n";
+            }
+        }
 
         /**
          * @brief Helper function to get cols.
@@ -1798,7 +2232,7 @@ class Matrix {
          * 
          * @return The cols of the matrix.
          */
-        size_t Cols() const noexcept;
+        size_t Cols() const noexcept { return cols; }
 
         /**
          * @brief Helper function to get rows.
@@ -1807,7 +2241,7 @@ class Matrix {
          * 
          * @return The rows of the matrix.
          */
-        size_t Rows() const noexcept;
+        size_t Rows() const noexcept { return rows; }
 
         /**
          * @brief Adds 2 matrices.
@@ -1817,7 +2251,21 @@ class Matrix {
          * @param other A const reference to another matrix.
          * @return A new matrix which is the result of this add other.
          */
-        Matrix operator+(const Matrix& other) const;
+        Matrix operator+(const Matrix& other) const {
+            if (!CheckSize(other)) {
+                throw std::runtime_error("Matrix size mismatch");
+            }
+
+            Matrix result(rows, cols);
+
+            for (size_t r = 0; r < rows; r++) {
+                for (size_t c = 0; c < cols; c++) {
+                    result.Set(r,c, Get(r,c) + other.Get(r,c));
+                }
+            }
+
+            return result;
+        }
 
         /**
          * @brief Subtracts 2 matricies.
@@ -1827,7 +2275,21 @@ class Matrix {
          * @param other A const reference to another matrix.
          * @return A new matrix which is the result of this subtract other.
          */
-        Matrix operator-(const Matrix& other) const;
+        Matrix operator-(const Matrix& other) const {
+            if (!CheckSize(other)) {
+                throw std::runtime_error("Matrix size mismatch");
+            }
+
+            Matrix result(rows, cols);
+
+            for (size_t r = 0; r < rows; r++) {
+                for (size_t c = 0; c < cols; c++) {
+                    result.Set(r,c, Get(r,c) - other.Get(r,c));
+                }
+            }
+
+            return result;
+        }
 
         /**
          * @brief Multiplies 2 matricies.
@@ -1837,17 +2299,49 @@ class Matrix {
          * @param other A const reference to another matrix.
          * @return A new matrix which is the result of this multiplied other.
          */
-        Matrix operator*(const Matrix& other) const;
+        Matrix operator*(const Matrix& other) const {
+            if (cols != other.rows) {
+                throw std::runtime_error("Matrix multiply dimension mismatch");
+            }
+
+            Matrix result(rows, other.cols);
+
+            for (size_t r = 0; r < rows; r++) {
+                for (size_t c = 0; c < other.cols; c++) {
+
+                    double sum = 0.0;
+
+                    for (size_t k = 0; k < cols; k++) {
+                        sum += Get(r,k) * other.Get(k,c);
+                    }
+
+                    result.Set(r,c,sum);
+                }
+            }
+
+            return result;
+        }
 
         /**
          * @brief Multiplies a matrix and a scalar.
          * 
          * This multiplies each number in a matrix by a scalar and returns the result (Aₓᵧ * n where n is a constant scalar, col and row are indicies).
          * 
-         * @param other A const scalar.
+         * @param scalar A const scalar.
          * @return A new matrix which is the result of this multiplied by a scalar - other.
          */
-        Matrix operator*(const double other) const;
+        Matrix operator*(const double scalar) const {
+            Matrix result(rows, cols);
+
+            for (size_t r = 0; r < rows; r++) {
+                for (size_t c = 0; c < cols; c++) {
+                    result.Set(r,c, Get(r,c) * scalar);
+                }
+            }
+
+            return result;
+        }
+
 
         /**
          * @brief Copy operator for matrices.
@@ -1857,16 +2351,19 @@ class Matrix {
          * @param other A const reference to another matrix to copy.
          * @return The new data copied, a reference to this.
          */
-        Matrix& operator=(const Matrix& other);
+        Matrix& operator=(const Matrix& other) {
+            if (this == &other) return *this;
 
-        /**
-         * @brief Move constructor for matrices.
-         * 
-         * Sets data in new matrix to data in other matrix with a deep copy, and destroys the old matrix.
-         * 
-         * @param other A different matrix to be destroyed and have its data moved into this.
-         */
-        Matrix(Matrix&& other) noexcept;
+            delete[] data;
+
+            rows = other.rows;
+            cols = other.cols;
+
+            data = new double[rows * cols];
+            std::copy(other.data, other.data + rows * cols, data);
+
+            return *this;
+        }
 
         /**
          * @brief Move operator for matrices.
@@ -1876,7 +2373,49 @@ class Matrix {
          * @param other A different matrix to be destroyed and have its data moved into this.
          * @return The matrix with the moved data stored.
          */
-        Matrix& operator=(Matrix&& other) noexcept;
+        Matrix& operator=(Matrix&& other) noexcept {
+            if (this == &other) return *this;
+
+            delete[] data;
+
+            data = other.data;
+            rows = other.rows;
+            cols = other.cols;
+
+            other.data = nullptr;
+            other.rows = 0;
+            other.cols = 0;
+
+            return *this;
+        }
+
+        /**
+         * @brief Gets item at row, col.
+         * @warning No bounds checking.
+         * 
+         * Operator that provides get access, does not provide bounds checking.
+         * 
+         * @param row The row to get data at.
+         * @param col The col to get data at.
+         * @return A reference to the data at row,col.
+         */
+        T& operator()(size_t row, size_t col) {
+            return data[GetIndex(row, col)];
+        }
+
+        /**
+         * @brief Gets const item at row,col.
+         * @warning No bounds checking.
+         * 
+         * Operator that provides get access, does not provide bounds checking.
+         * 
+         * @param row The row to get data at.
+         * @param col The col to get data at.
+         * @return A const reference to the data at row,col.
+         */
+        const T& operator()(size_t row, size_t col) const {
+            return data[GetIndex(row, col)];
+        }
 
         /**
          * @brief Equality operator for matrices.
@@ -1886,7 +2425,17 @@ class Matrix {
          * @param other A matrix to compare against this.
          * @return True if they are equal, false otherwise.
          */
-        bool operator==(const Matrix& other) const;
+        bool operator==(const Matrix& other) const {
+            if (!CheckSize(other)) return false;
+
+            for (size_t i = 0; i < rows*cols; i++) {
+                if (data[i] != other.data[i]) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
 };
 
 /**
@@ -1900,8 +2449,8 @@ class Matrix {
 class DataSet {
     protected:
         // Data and target matrices, stored in vectors for if there are multiple.
-        std::vector<Matrix> X;
-        std::vector<Matrix> Y;
+        std::vector<Matrix<double>> X;
+        std::vector<Matrix<double>> Y;
 
     public:
         /**
@@ -1909,7 +2458,7 @@ class DataSet {
          * 
          * Sets X and Y to empty vectors. Data should be put in with AddSample or Copy after.
          */
-        DataSet() {X = std::vector<Matrix>(); Y = std::vector<Matrix>();};
+        DataSet() {X = std::vector<Matrix<double>>(); Y = std::vector<Matrix<double>>();};
 
         /**
          * @brief Constructor
@@ -1919,7 +2468,7 @@ class DataSet {
          * @param X A const reference to a matrix of the train/test data.
          * @param Y A const reference to a matrix of the target data.
          */
-        DataSet(const Matrix& X, const Matrix& Y) : X({X}), Y({Y}) {};
+        DataSet(const Matrix<double>& X, const Matrix<double>& Y) : X({X}), Y({Y}) {};
 
         /**
          * @brief Copies data into vectors.
@@ -1929,7 +2478,7 @@ class DataSet {
          * @param X A pointer to a matrix that will overwrite X data in the class.
          * @param Y A pointer to a matrix that will overwrite Y data in the class.
          */
-        virtual void Copy(Matrix* X, Matrix* Y) = 0;
+        virtual void Copy(Matrix<double>* X, Matrix<double>* Y) = 0;
 
         /**
          * @brief Copies vectors into class.
@@ -1939,7 +2488,7 @@ class DataSet {
          * @param X A reference to a vector of new X data that will overwrite old X data.
          * @param Y A reference to a vector of new Y data that will overwrite old Y data.
          */
-        virtual void Copy(std::vector<Matrix>& X, std::vector<Matrix>& Y) = 0;
+        virtual void Copy(std::vector<Matrix<double>>& X, std::vector<Matrix<double>>& Y) = 0;
 
         /**
          * @brief Copies a different dataset into this.
@@ -1976,7 +2525,7 @@ class DataSet {
          * @param X A reference to a matrix that will be appended onto the X vector.
          * @param Y A reference to a matrix that will be appended onto the Y vector.
          */
-        virtual void AddSample(Matrix& X, Matrix& Y) = 0;
+        virtual void AddSample(Matrix<double>& X, Matrix<double>& Y) = 0;
 
         /**
          * @brief Gets the size of the data.
@@ -1995,7 +2544,7 @@ class DataSet {
          * @param index The index in the vectors of which data to retrieve.
          * @return A tuple of the order X, Y of the data found.
          */
-        virtual std::tuple<Matrix, Matrix> Get(size_t index) const = 0;
+        virtual std::tuple<Matrix<double>, Matrix<double>> Get(size_t index) const = 0;
 
         /**
          * @brief Gets vector of data matrices.
@@ -2004,7 +2553,7 @@ class DataSet {
          * 
          * @return The vector of X data.
          */
-        virtual std::vector<Matrix> GetX() const = 0;
+        virtual std::vector<Matrix<double>> GetX() const = 0;
 
         /**
          * @brief Gets vector of target matrices.
@@ -2013,7 +2562,7 @@ class DataSet {
          * 
          * @return The vector of Y data.
          */
-        virtual std::vector<Matrix> GetY() const = 0;
+        virtual std::vector<Matrix<double>> GetY() const = 0;
 
         /**
          * @brief Converts all data in vectors to vectors of row matrices.
@@ -2022,7 +2571,7 @@ class DataSet {
          * 
          * @return A tuple of the vectors of row matrices.
          */
-        virtual std::tuple<std::vector<Matrix>, std::vector<Matrix>> ToVector() const = 0;
+        virtual std::tuple<std::vector<Matrix<double>>, std::vector<Matrix<double>>> ToVector() const = 0;
 };
 
 /**
@@ -2162,10 +2711,10 @@ class DataLoader {
  */
 struct Layer {
     // The weights used for forward pass
-    Matrix weights;
+    Matrix<double> weights;
     size_t num_weights;
     // The biases used for forward pass
-    Matrix biases;
+    Matrix<double> biases;
 
     // Pointers for linked list
     Layer* next;
@@ -2182,7 +2731,7 @@ struct Layer {
      * @param next A pointer to the next layer in the linked list.
      * @param prev A pointer to the previous layer in the linked list.
      */
-    Layer(Matrix& weights, size_t num_weights, Matrix& biases, Layer* next, Layer* prev) {
+    Layer(Matrix<double>& weights, size_t num_weights, Matrix<double>& biases, Layer* next, Layer* prev) {
         // Assign all variables
         this->weights = weights;
         this->num_weights = num_weights;
@@ -2228,7 +2777,7 @@ class NN {
          * @param output The models predicted output.
          * @param target The expected output.
          */
-        inline double MSEError(Matrix output, Matrix target) const;
+        inline double MSEError(Matrix<double> output, Matrix<double> target) const;
     
     public:
         /**

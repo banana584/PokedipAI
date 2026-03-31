@@ -9,185 +9,6 @@ std::string ReadFile(const char* path) {
     return buffer.str();
 }
 
-Matrix::Matrix(size_t rows, size_t cols) : rows(rows), cols(cols) {
-    data = new double[rows * cols]{};
-}
-
-Matrix::Matrix(Matrix& other) : rows(other.rows), cols(other.cols) {
-    data = new double[rows * cols];
-    std::copy(other.data, other.data + rows * cols, data);
-}
-
-Matrix::Matrix(const Matrix& other) : rows(other.rows), cols(other.cols) {
-    data = new double[rows * cols];
-    std::copy(other.data, other.data + rows * cols, data);
-}
-
-Matrix::Matrix(Matrix&& other) noexcept : rows(other.rows), cols(other.cols), data(other.data) {
-    other.data = nullptr;
-    other.rows = 0;
-    other.cols = 0;
-}
-
-Matrix::Matrix() : rows(0), cols(0), data(nullptr) {}
-
-Matrix::~Matrix() {
-    delete[] data;
-}
-
-size_t Matrix::GetIndex(size_t row, size_t col) const {
-    return row * cols + col;
-}
-
-double Matrix::Get(size_t row, size_t col) const {
-    if (row >= rows || col >= cols) {
-        throw std::out_of_range("Index out of range");
-    }
-
-    return data[GetIndex(row, col)];
-}
-
-void Matrix::Set(size_t row, size_t col, double value) {
-    if (row >= rows || col >= cols)
-        throw std::out_of_range("Index out of range");
-
-    data[GetIndex(row, col)] = value;
-}
-
-size_t Matrix::Rows() const noexcept { return rows; }
-size_t Matrix::Cols() const noexcept { return cols; }
-
-bool Matrix::CheckSize(const Matrix& other) const {
-    return rows == other.rows && cols == other.cols;
-}
-
-void Matrix::Print() const {
-    for (size_t r = 0; r < rows; r++) {
-        for (size_t c = 0; c < cols; c++)
-            std::cout << Get(r,c) << " ";
-        std::cout << "\n";
-    }
-}
-
-Matrix Matrix::Transpose() const {
-    Matrix result(cols, rows);
-
-    for (size_t r = 0; r < rows; r++)
-        for (size_t c = 0; c < cols; c++)
-            result.Set(c, r, Get(r,c));
-
-    return result;
-}
-
-Matrix Matrix::operator+(const Matrix& other) const {
-    if (!CheckSize(other)) {
-        throw std::runtime_error("Matrix size mismatch");
-    }
-
-    Matrix result(rows, cols);
-
-    for (size_t r = 0; r < rows; r++) {
-        for (size_t c = 0; c < cols; c++) {
-            result.Set(r,c, Get(r,c) + other.Get(r,c));
-        }
-    }
-
-    return result;
-}
-
-Matrix Matrix::operator-(const Matrix& other) const {
-    if (!CheckSize(other)) {
-        throw std::runtime_error("Matrix size mismatch");
-    }
-
-    Matrix result(rows, cols);
-
-    for (size_t r = 0; r < rows; r++) {
-        for (size_t c = 0; c < cols; c++) {
-            result.Set(r,c, Get(r,c) - other.Get(r,c));
-        }
-    }
-
-    return result;
-}
-
-Matrix Matrix::operator*(const Matrix& other) const {
-    if (cols != other.rows) {
-        throw std::runtime_error("Matrix multiply dimension mismatch");
-    }
-
-    Matrix result(rows, other.cols);
-
-    for (size_t r = 0; r < rows; r++) {
-        for (size_t c = 0; c < other.cols; c++) {
-
-            double sum = 0.0;
-
-            for (size_t k = 0; k < cols; k++) {
-                sum += Get(r,k) * other.Get(k,c);
-            }
-
-            result.Set(r,c,sum);
-        }
-    }
-
-    return result;
-}
-
-Matrix Matrix::operator*(double scalar) const {
-    Matrix result(rows, cols);
-
-    for (size_t r = 0; r < rows; r++) {
-        for (size_t c = 0; c < cols; c++) {
-            result.Set(r,c, Get(r,c) * scalar);
-        }
-    }
-
-    return result;
-}
-
-Matrix& Matrix::operator=(const Matrix& other) {
-    if (this == &other) return *this;
-
-    delete[] data;
-
-    rows = other.rows;
-    cols = other.cols;
-
-    data = new double[rows * cols];
-    std::copy(other.data, other.data + rows * cols, data);
-
-    return *this;
-}
-
-Matrix& Matrix::operator=(Matrix&& other) noexcept {
-    if (this == &other) return *this;
-
-    delete[] data;
-
-    data = other.data;
-    rows = other.rows;
-    cols = other.cols;
-
-    other.data = nullptr;
-    other.rows = 0;
-    other.cols = 0;
-
-    return *this;
-}
-
-bool Matrix::operator==(const Matrix& other) const {
-    if (!CheckSize(other)) return false;
-
-    for (size_t i = 0; i < rows*cols; i++) {
-        if (data[i] != other.data[i]) {
-            return false;
-        }
-    }
-
-    return true;
-}
-
 DataSet::~DataSet() {}
 
 DataLoader::DataLoader(DataSet* data, size_t num_batches, bool shuffle) : num_batches(num_batches), shuffle(shuffle) {
@@ -209,9 +30,9 @@ DataLoader::DataLoader(DataSet* data, size_t num_batches, bool shuffle) : num_ba
 
         size_t end = std::min(start + batch_size, total);
 
-        std::vector<Matrix> subX(Xvec.begin() + start, Xvec.begin() + end);
+        std::vector<Matrix<double>> subX(Xvec.begin() + start, Xvec.begin() + end);
 
-        std::vector<Matrix> subY(Yvec.begin() + start, Yvec.begin() + end);
+        std::vector<Matrix<double>> subY(Yvec.begin() + start, Yvec.begin() + end);
 
         auto batchData = data->CloneEmpty();
         batchData->Copy(subX, subY);
@@ -277,7 +98,7 @@ NN::NN(size_t inputs, size_t outputs, size_t num_layers, std::vector<size_t> num
         size_t curr_size = num_neurons[i];
 
         // Initialize weights to random values
-        Matrix weights(prev_size, curr_size);
+        Matrix<double> weights(prev_size, curr_size);
 
         for (size_t r = 0; r < weights.Rows(); r++) {
             for (size_t c = 0; c < weights.Cols(); c++) {
@@ -286,7 +107,7 @@ NN::NN(size_t inputs, size_t outputs, size_t num_layers, std::vector<size_t> num
         }
 
         // Initialize biases to random values
-        Matrix biases(1, curr_size);
+        Matrix<double> biases(1, curr_size);
         for (size_t c = 0; c < curr_size; c++) {
             biases.Set(0, c, dist(gen));
         }
@@ -323,8 +144,8 @@ inline double NN::Sigmoid(double x) const {
     return 1 / (1 + exp(-x));
 }
 
-inline double NN::MSEError(Matrix output, Matrix target) const {
-    Matrix diff = output - target;
+inline double NN::MSEError(Matrix<double> output, Matrix<double> target) const {
+    Matrix<double> diff = output - target;
 
     double sum = 0.0;
     for (size_t row = 0; row < diff.Rows(); row++) {
@@ -338,7 +159,7 @@ inline double NN::MSEError(Matrix output, Matrix target) const {
 
 std::vector<double> NN::Forward(const std::vector<double>& inputs) const {
     // Convert inputs to 1×n matrix
-    Matrix current_input(1, inputs.size());
+    Matrix<double> current_input(1, inputs.size());
     for (size_t col = 0; col < inputs.size(); col++)
         current_input.Set(0, col, inputs[col]);
 
@@ -346,7 +167,7 @@ std::vector<double> NN::Forward(const std::vector<double>& inputs) const {
     Layer* current = head;
     while (current) {
         // z = xW + b
-        Matrix z = current_input * current->weights;
+        Matrix<double> z = current_input * current->weights;
         z = z + current->biases;
 
         // Apply sigmoid activation
@@ -371,18 +192,18 @@ std::vector<double> NN::Forward(const std::vector<double>& inputs) const {
 
 double NN::Backward(const std::vector<double>& inputs, const std::vector<double>& target, double lr) {
     // Perform forward pass to get each layer value
-    Matrix input_matrix(1, inputs.size());
+    Matrix<double> input_matrix(1, inputs.size());
     for (size_t col = 0; col < inputs.size(); col++) {
         input_matrix.Set(0, col, inputs[col]);
     }
 
-    std::vector<Matrix> layer_outputs;
-    Matrix current_input = input_matrix;
+    std::vector<Matrix<double>> layer_outputs;
+    Matrix<double> current_input = input_matrix;
 
     Layer* current = head;
     while (current) {
         // z = xW + b
-        Matrix z = current_input * current->weights;
+        Matrix<double> z = current_input * current->weights;
         z = z + current->biases;
 
         // Apply sigmoid activation
@@ -397,24 +218,24 @@ double NN::Backward(const std::vector<double>& inputs, const std::vector<double>
         current = current->next;
     }
 
-    Matrix output = current_input; // final layer output
+    Matrix<double> output = current_input; // final layer output
 
     // Get loss
-    Matrix target_matrix(1, target.size());
+    Matrix<double> target_matrix(1, target.size());
     for (size_t col = 0; col < target.size(); col++) {
         target_matrix.Set(0, col, target[col]);
     }
 
-    Matrix diff = output - target_matrix;
+    Matrix<double> diff = output - target_matrix;
     double loss = MSEError(output, target_matrix);
 
     // Backwards pass 
-    Matrix dprev = diff; // gradient of loss w.r.t output
+    Matrix<double> dprev = diff; // gradient of loss w.r.t output
     for (int layer_idx = layer_outputs.size() - 1; layer_idx >= 0; layer_idx--) {
-        Matrix activation = layer_outputs[layer_idx];
+        Matrix<double> activation = layer_outputs[layer_idx];
 
         // derivative of sigmoid
-        Matrix dactivation(activation.Rows(), activation.Cols());
+        Matrix<double> dactivation(activation.Rows(), activation.Cols());
         for (size_t row = 0; row < activation.Rows(); row++) {
             for (size_t col = 0; col < activation.Cols(); col++) {
                 double a = activation.Get(row, col);
@@ -423,7 +244,7 @@ double NN::Backward(const std::vector<double>& inputs, const std::vector<double>
         }
 
         // dz = dprev ⊙ sigmoid'(z)
-        Matrix dz(activation.Rows(), activation.Cols());
+        Matrix<double> dz(activation.Rows(), activation.Cols());
         for (size_t row = 0; row < dz.Rows(); row++) {
             for (size_t col = 0; col < dz.Cols(); col++) {
                 dz.Set(row, col, dprev.Get(row, col) * dactivation.Get(row, col));
@@ -431,10 +252,10 @@ double NN::Backward(const std::vector<double>& inputs, const std::vector<double>
         }
 
         // input to this layer
-        Matrix input_to_layer = (layer_idx == 0) ? input_matrix : layer_outputs[layer_idx - 1];
+        Matrix<double> input_to_layer = (layer_idx == 0) ? input_matrix : layer_outputs[layer_idx - 1];
 
         // gradient w.r.t weights and biases
-        Matrix dweights = input_to_layer.Transpose() * dz;
+        Matrix<double> dweights = input_to_layer.Transpose() * dz;
 
         Layer* layer_ptr = head;
         for (int i = 0; i < layer_idx; i++) layer_ptr = layer_ptr->next;
@@ -443,7 +264,7 @@ double NN::Backward(const std::vector<double>& inputs, const std::vector<double>
         layer_ptr->weights = layer_ptr->weights - (dweights * lr);
 
         // update biases
-        Matrix dbias(1, dz.Cols());
+        Matrix<double> dbias(1, dz.Cols());
         for (size_t col = 0; col < dz.Cols(); col++) {
             double sum = 0.0;
             for (size_t row = 0; row < dz.Rows(); row++) {
@@ -467,9 +288,9 @@ void NN::Train(size_t epochs, double lr, DataLoader& loader) {
 
         auto ptr = it.operator->();
         auto data = ptr->Clone();
-        std::tuple<std::vector<Matrix>, std::vector<Matrix>> tuple = data->ToVector();
-        Matrix X = std::get<0>(tuple)[0];
-        Matrix Y = std::get<1>(tuple)[0];
+        std::tuple<std::vector<Matrix<double>>, std::vector<Matrix<double>>> tuple = data->ToVector();
+        Matrix<double> X = std::get<0>(tuple)[0];
+        Matrix<double> Y = std::get<1>(tuple)[0];
 
         // iterate over samples
         for (size_t sample = 0; sample < X.Rows(); sample++) {
