@@ -1,6 +1,7 @@
 #include "nn.hpp"
 
 std::mt19937 NN::gen{std::random_device{}()};
+std::mt19937 DataLoader::gen{std::random_device{}()};
 
 std::string ReadFile(const char* path) {
     std::ifstream file(path);
@@ -15,6 +16,24 @@ DataLoader::DataLoader(DataSet* data, size_t num_batches, bool shuffle) : num_ba
     batch_size = data->Size() / num_batches;
 
     auto vec = data->ToVector();
+
+    if (shuffle) {
+        std::vector<size_t> indices(data->Size());
+        std::iota(indices.begin(), indices.end(), 0);
+
+        std::shuffle(indices.begin(), indices.end(), gen);
+
+        auto& Xvec = std::get<0>(vec);
+        auto& Yvec = std::get<1>(vec);
+
+        Xvec = std::vector<Matrix<double>>(indices.size());
+        Yvec = std::vector<Matrix<double>>(indices.size());
+
+        for (size_t i = 0; i < indices.size(); ++i) {
+            Xvec[i] = Xvec[indices[i]];
+            Yvec[i] = Yvec[indices[i]];
+        }
+    }
 
     for (size_t i = 0; i < num_batches; ++i) {
         size_t start = i * batch_size;

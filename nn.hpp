@@ -7,6 +7,7 @@
 #include <tuple>
 #include <utility>
 #include <memory>
+#include <algorithm>
 #include <unordered_map>
 #include <initializer_list>
 #include <fstream>
@@ -2588,8 +2589,9 @@ class DataLoader {
         size_t num_batches;
         size_t batch_size;
         // If shuffled or not
-        // TODO: Make shuffle do something in constructor
         bool shuffle;
+        // Static random number generator - only 1 exists.
+        static std::mt19937 gen;
     
     public:
         /**
