@@ -8,6 +8,7 @@
 #include <utility>
 #include <memory>
 #include <algorithm>
+#include <functional>
 #include <unordered_map>
 #include <initializer_list>
 #include <fstream>
@@ -52,213 +53,210 @@ enum class ShaderType {
  */
 template <typename S>
 class Shader {
-    const char* path; // Path of source file.
-    const char* source; // Source code.
-    ShaderType type; // Type of shader - vertex, fragment, compute, etc.
-    std::shared_ptr<S> shader; // Pointer to graphics API shader.
+    protected:
+        const char* path; // Path of source file.
+        std::string source; // Source code.
+        ShaderType type; // Type of shader - vertex, fragment, compute, etc.
+        S shader{};
 
-    /**
-     * @brief Default constructor.
-     * 
-     * Initializes all values to Null.
-     */
-    Shader() noexcept {
-        // All null values
-        this->path = "";
-        this->source = "";
-        this->type = ShaderType::None;
-        // Null with custom deleter.
-        this->shader = std::shared_ptr<S>(nullptr, [this](S* ptr) { if (!ptr) return; this->DestroyShader(); delete ptr; });
-    }
-
-    /**
-     * @brief Copy constructor.
-     * 
-     * Initializes values in this to values in other.
-     * 
-     * @param other A const reference to another shader to copy values of.
-     */
-    Shader(const Shader<S>& other) noexcept {
-        // Copy values
-        this->path = other.path;
-        this->source = other.source;
-        this->type = other.type;
-        // Null check
-        if (other.shader) {
-            this->shader = other.shader;
-        } else {
-            this->shader = std::shared_ptr<S>(nullptr, [this](S* ptr) { if (!ptr) return; this->DestroyShader(); delete ptr; });
+    public:
+        /**
+         * @brief Default constructor.
+         * 
+         * Initializes all values to Null.
+         */
+        Shader() noexcept {
+            // All null values
+            this->path = "";
+            this->source = "";
+            this->type = ShaderType::None;
+            // Null with custom deleter.
+            this->shader = {};
         }
-    }
 
-    /**
-     * @brief Move constructor.
-     * 
-     * Initializes values in this to values in other, then deletes values in other.
-     * 
-     * @param other Another shader to move data into this.
-     */
-    Shader(Shader<S>&& other) noexcept {
-        // Copy values
-        this->path = other.path;
-        this->source = other.source;
-        this->type = other.type;
-        // Remove values from other
-        other.path = "";
-        other.source = "";
-        other.type = ShaderType::None;
-        // Null check
-        if (other.shader) {
+        /**
+         * @brief Copy constructor.
+         * 
+         * Initializes values in this to values in other.
+         * 
+         * @param other A const reference to another shader to copy values of.
+         */
+        Shader(const Shader<S>& other) noexcept {
+            // Copy values
+            this->path = other.path;
+            this->source = other.source;
+            this->type = other.type;
             this->shader = other.shader;
-            other.shader = std::shared_ptr<S>(nullptr, [this](S* ptr) { if (!ptr) return; this->DestroyShader(); delete ptr; });
-        } else {
-            this->shader = std::shared_ptr<S>(nullptr, [this](S* ptr) { if (!ptr) return; this->DestroyShader(); delete ptr; });
         }
-    }
 
-    /**
-     * @brief Creates graphics API representation of shader from member variables.
-     * 
-     * A pure virtual function whose implementation should create/compile shader from member variables such as source and type. Result should be stores in shader variable.
-     */
-    virtual void CreateShader() = 0;
-
-    /**
-     * @brief Destroys graphics API representation of shader.
-     * @warning Should only be used when reference count is 0 to prevent double frees or use after frees.
-     * @warning Pointer is not deleted.
-     * 
-     * A pure virtual function whose implementation should destroy the shader from member variables but not delete the pointer.
-     */
-    virtual void DestroyShader() = 0;
-
-    /**
-     * @brief Creates a new shader from args.
-     * 
-     * A pure virtual function whose implementation should create a new shader based off args.
-     * 
-     * @param type The type of shader to create.
-     * @param path The path to the source code of the shader.
-     */
-    virtual void Clone(ShaderType type, const char* path) = 0;
-
-    /**
-     * @brief Creates a new shader from args.
-     * 
-     * A pure virtual function whose implementation should create a new shader based off args.
-     * 
-     * @param type The type of shader to create.
-     * @param other Graphics API representation of shader.
-     */
-    virtual void Clone(ShaderType type, S& other) = 0;
-
-    /**
-     * @brief Creates unique pointer to empty version of Shader.
-     * 
-     * A pure virtual function whose implementation should create a new empty shader and return it using a covariant return type.
-     * 
-     * @return A unique pointer to an empty shader.
-     */
-    virtual std::unique_ptr<Shader<S>> CopyEmpty() = 0;
-
-    /**
-     * @brief Creates unique pointer to copy of this.
-     * 
-     * A pure virtual function whose implementation should create a new copy of this and return it using a covariant return type.
-     * 
-     * @return A unique pointer to a copy of this.
-     */
-    virtual std::unique_ptr<Shader<S>> Copy() = 0;
-
-    /**
-     * @brief Destructor.
-     * 
-     * A pure virtual function whose implementation should clean up all resources not handled already.
-     */
-    virtual ~Shader() = 0;
-
-    /**
-     * @brief Copy operator.
-     * 
-     * Copies data from other and puts it into this.
-     * 
-     * @param other The other shader to copy data from.
-     * @return The shader with newly copied data.
-     */
-    Shader<S>& operator=(const Shader<S>& other) noexcept {
-        // Equality check
-        if (this == &other) return *this;
-
-        // Copy variables
-        this->path = other.path;
-        this->source = other.source;
-        this->type = other.type;
-        // Null check
-        if (other.shader) {
+        /**
+         * @brief Move constructor.
+         * 
+         * Initializes values in this to values in other, then deletes values in other.
+         * 
+         * @param other Another shader to move data into this.
+         */
+        Shader(Shader<S>&& other) noexcept {
+            // Copy values
+            this->path = other.path;
+            this->source = other.source;
+            this->type = other.type;
             this->shader = other.shader;
-        } else {
-            this->shader = std::shared_ptr<S>(nullptr, [this](S* ptr) { if (!ptr) return; this->DestroyShader(); delete ptr; });
+            // Remove values from other
+            other.path = "";
+            other.source = "";
+            other.type = ShaderType::None;
+            other.shader = {};
         }
-    }
 
-    /**
-     * @brief Move operator.
-     * 
-     * Moves data from other and puts it into this.
-     * 
-     * @param other The other shader to move data from.
-     * @return The shader with newly moved data.
-     */
-    Shader<S>& operator=(Shader<S>&& other) noexcept {
-        // Equality check
-        if (this == &other) return *this;
+        /**
+         * @brief Creates graphics API representation of shader from member variables.
+         * 
+         * A pure virtual function whose implementation should create/compile shader from member variables such as source and type. Result should be stores in shader variable.
+         */
+        virtual void CreateShader() = 0;
 
-        // Copy data into this
-        this->path = other.path;
-        this->source = other.source;
-        this->type = other.type;
-        // Remove data from other
-        other.path = "";
-        other.source = "";
-        other.type = ShaderType::None;
-        // Null check
-        if (other.shader) {
+        /**
+         * @brief Destroys graphics API representation of shader.
+         * @warning Should only be used when reference count is 0 to prevent double frees or use after frees.
+         * @warning Pointer is not deleted.
+         * 
+         * A pure virtual function whose implementation should destroy the shader from member variables but not delete the pointer.
+         */
+        virtual void DestroyShader() = 0;
+
+        /**
+         * @brief Creates a new shader from args.
+         * 
+         * A pure virtual function whose implementation should create a new shader based off args.
+         * 
+         * @param type The type of shader to create.
+         * @param path The path to the source code of the shader.
+         */
+        virtual void Clone(ShaderType type, const char* path) = 0;
+
+        /**
+         * @brief Creates a new shader from args.
+         * 
+         * A pure virtual function whose implementation should create a new shader based off args.
+         * 
+         * @param type The type of shader to create.
+         * @param other Graphics API representation of shader.
+         */
+        virtual void Clone(ShaderType type, S& other) = 0;
+
+        /**
+         * @brief Creates unique pointer to empty version of Shader.
+         * 
+         * A pure virtual function whose implementation should create a new empty shader and return it using a covariant return type.
+         * 
+         * @return A unique pointer to an empty shader.
+         */
+        virtual std::unique_ptr<Shader<S>> CopyEmpty() = 0;
+
+        /**
+         * @brief Creates unique pointer to copy of this.
+         * 
+         * A pure virtual function whose implementation should create a new copy of this and return it using a covariant return type.
+         * 
+         * @return A unique pointer to a copy of this.
+         */
+        virtual std::unique_ptr<Shader<S>> Copy() = 0;
+
+        /**
+         * @brief Destructor.
+         * 
+         * A pure virtual function whose implementation should clean up all resources not handled already.
+         */
+        virtual ~Shader() {return;};
+
+        /**
+         * @brief Gets id under the hood.
+         * 
+         * Retrieves the graphics API representation of the shader.
+         * 
+         * @return The id of the shader.
+         */
+        S GetID() const noexcept {
+            return shader;
+        }
+
+        /**
+         * @brief Copy operator.
+         * 
+         * Copies data from other and puts it into this.
+         * 
+         * @param other The other shader to copy data from.
+         * @return The shader with newly copied data.
+         */
+        Shader<S>& operator=(const Shader<S>& other) noexcept {
+            // Equality check
+            if (this == &other) return *this;
+
+            // Copy variables
+            this->path = other.path;
+            this->source = other.source;
+            this->type = other.type;
             this->shader = other.shader;
-            other.shader = std::shared_ptr<S>(nullptr, [this](S* ptr) { if (!ptr) return; this->DestroyShader(); delete ptr; });
-        } else {
-            this->shader = std::shared_ptr<S>(nullptr, [this](S* ptr) { if (!ptr) return; this->DestroyShader(); delete ptr; });
+
+            return *this;
         }
-    }
 
-    /**
-     * @brief Equality operator.
-     * 
-     * Checks if 2 shaders are equal.
-     * 
-     * @param other A different shader to compare to this.
-     * @return True if they are equal, false otherwise.
-     */
-    bool operator==(const Shader<S>& other) const noexcept {
-        return this->path == other.path && *this->shader == *other.shader && this->source == other.source && this->type == other.type;
-    }
+        /**
+         * @brief Move operator.
+         * 
+         * Moves data from other and puts it into this.
+         * 
+         * @param other The other shader to move data from.
+         * @return The shader with newly moved data.
+         */
+        Shader<S>& operator=(Shader<S>&& other) noexcept {
+            // Equality check
+            if (this == &other) return *this;
 
-    /**
-     * @brief Inequality operator.
-     * 
-     * Checks if 2 shaders are not equal.
-     * 
-     * @param other A different shader to compare to this.
-     * @return True if they are not equal, false otherwise.
-     */
-    bool operator!=(const Shader<S>& other) const noexcept {
-        return !(*this == other);
-    }
+            // Copy data into this
+            this->path = other.path;
+            this->source = other.source;
+            this->type = other.type;
+            this->shader = other.shader;
+            // Remove data from other
+            other.path = "";
+            other.source = "";
+            other.type = ShaderType::None;
+            other.shader = {};
 
-    // Delete other comparison operators.
-    bool operator>(const Shader<S>& other) = delete;
-    bool operator>=(const Shader<S>& other) = delete;
-    bool operator<(const Shader<S>& other) = delete;
-    bool operator<=(const Shader<S>& other) = delete;
+            return *this;
+        }
+
+        /**
+         * @brief Equality operator.
+         * 
+         * Checks if 2 shaders are equal.
+         * 
+         * @param other A different shader to compare to this.
+         * @return True if they are equal, false otherwise.
+         */
+        bool operator==(const Shader<S>& other) const noexcept {
+            return this->path == other.path && *this->shader == *other.shader && this->source == other.source && this->type == other.type;
+        }
+
+        /**
+         * @brief Inequality operator.
+         * 
+         * Checks if 2 shaders are not equal.
+         * 
+         * @param other A different shader to compare to this.
+         * @return True if they are not equal, false otherwise.
+         */
+        bool operator!=(const Shader<S>& other) const noexcept {
+            return !(*this == other);
+        }
+
+        // Delete other comparison operators.
+        bool operator>(const Shader<S>& other) = delete;
+        bool operator>=(const Shader<S>& other) = delete;
+        bool operator<(const Shader<S>& other) = delete;
+        bool operator<=(const Shader<S>& other) = delete;
 };
 
 /**
@@ -305,7 +303,7 @@ class Buffer {
         bool read; // If it can be read from
         bool write; // If it can be written to
         size_t binding; // Binding on shader side
-        std::shared_ptr<B> buffer; // Graphics API representation
+        B buffer{}; // Graphics API representation
 
     public:
         /**
@@ -320,7 +318,7 @@ class Buffer {
             this->write = false;
             this->binding = 0;
             // Set custom deleter
-            this->buffer = std::shared_ptr<B>(nullptr, [this](B* ptr) { if (!ptr) return; this->DestroyBuffer(); delete ptr; });
+            this->buffer = {};
         }
 
         /**
@@ -336,12 +334,7 @@ class Buffer {
             this->read = other.read;
             this->write = other.write;
             this->binding = other.binding;
-            // Null check
-            if (other.buffer) {
-                this->buffer = other.buffer;
-            } else {
-                this->buffer = std::shared_ptr<B>(nullptr, [this](B* ptr) { if (!ptr) return; this->DestroyBuffer(); delete ptr; });
-            }
+            this->buffer = other.buffer;
         }
 
         /**
@@ -357,18 +350,13 @@ class Buffer {
             this->read = other.read;
             this->write = other.write;
             this->binding = other.binding;
+            this->buffer = other.buffer;
             // Delete data from other
             other.type = BufferType::None;
             other.read = false;
             other.write = false;
             other.binding = 0;
-            // Null check
-            if (other.buffer) {
-                this->buffer = other.buffer;
-                other.buffer = std::shared_ptr<B>(nullptr, [this](B* ptr) { if (!ptr) return; this->DestroyBuffer(); delete ptr; });
-            } else {
-                this->buffer = std::shared_ptr<B>(nullptr, [this](B* ptr) { if (!ptr) return; this->DestroyBuffer(); delete ptr; });
-            }
+            other.buffer = {};
         }
 
         /**
@@ -430,7 +418,7 @@ class Buffer {
          * 
          * A pure virtual function whose implementation should clean up all resources that are not already handled.
          */
-        virtual ~Buffer() = 0;
+        virtual ~Buffer() {};
 
         /**
          * @brief Gets the graphics API representation of the buffer.
@@ -439,8 +427,8 @@ class Buffer {
          * 
          * @return The raw buffer id.
          */
-        B GetId() const noexcept {
-            return *buffer;
+        B GetID() const noexcept {
+            return buffer;
         }
 
         /**
@@ -506,12 +494,9 @@ class Buffer {
             this->read = other.read;
             this->write = other.write;
             this->binding = other.binding;
-            // Null check
-            if (other.buffer) {
-                this->buffer = other.buffer;
-            } else {
-                this->buffer = std::shared_ptr<B>(nullptr, [this](B* ptr) { if (!ptr) return; this->DestroyBuffer(); delete ptr; });
-            }
+            this->buffer = other.buffer;
+
+            return *this;
         }
 
         /**
@@ -531,18 +516,15 @@ class Buffer {
             this->read = other.read;
             this->write = other.write;
             this->binding = other.binding;
+            this->buffer = other.buffer;
             // Delete other's data
             other.type = BufferType::None;
             other.read = false;
             other.write = false;
             other.binding = 0;
-            // Null check
-            if (other.buffer) {
-                this->buffer = other.buffer;
-                other.buffer = std::shared_ptr<B>(nullptr, [this](B* ptr) { if (!ptr) return; this->DestroyBuffer(); delete ptr; });
-            } else {
-                this->buffer = std::shared_ptr<B>(nullptr, [this](B* ptr) { if (!ptr) return; this->DestroyBuffer(); delete ptr; });
-            }
+            other.buffer = {};
+
+            return *this;
         }
 
         /**
@@ -605,8 +587,8 @@ enum class VertexArrayAttribType {
 template <typename A>
 class VertexArray {
     protected:
-        // Pointer to graphics API representation
-        std::shared_ptr<A> array;
+        // Graphics API representation
+        A array{};
 
     public:
         /**
@@ -615,7 +597,7 @@ class VertexArray {
          * Sets array to nullptr, with custom deleter.
          */
         VertexArray() noexcept {
-            array = std::shared_ptr<A>(nullptr, [this](A* ptr) { if (!ptr) return; this->DestroyVertexArray(); delete ptr; });
+            array = {};
         }
 
         /**
@@ -626,12 +608,7 @@ class VertexArray {
          * @param other A const reference to another vertex array.
          */
         VertexArray(const VertexArray& other) noexcept {
-            // Null check
-            if (other.array) {
-                this->array = other.array;
-            } else {
-                this->array = std::shared_ptr<A>(nullptr, [this](A* ptr) { if (!ptr) return; this->DestroyVertexArray(); delete ptr; });
-            }
+            this->array = other.array;
         }
 
         /**
@@ -642,13 +619,8 @@ class VertexArray {
          * @param other Another vertex array to have its data moved into this.
          */
         VertexArray(VertexArray&& other) noexcept {
-            // Null check
-            if (other.array) {
-                this->array = other.array;
-                other.array = std::shared_ptr<A>(nullptr, [this](A* ptr) { if (!ptr) return; this->DestroyVertexArray(); delete ptr; });
-            } else {
-                this->array = std::shared_ptr<A>(nullptr, [this](A* ptr) { if (!ptr) return; this->DestroyVertexArray(); delete ptr; });
-            }
+            this->array = other.array;
+            other.array = {};
         }
 
         /**
@@ -699,7 +671,18 @@ class VertexArray {
          * 
          * A pure virtual function whose implementation should clean up any unhandled resources.
          */
-        virtual ~VertexArray() = 0;
+        virtual ~VertexArray() {};
+
+        /**
+         * @brief Gets vertex array under the hood.
+         * 
+         * Retrieves the graphics API representation of the vertex array.
+         * 
+         * @return The id of the vertex array.
+         */
+        A GetID() const noexcept {
+            return *array;
+        }
 
         /**
          * @brief Binds a vertex array in the graphics API.
@@ -713,7 +696,7 @@ class VertexArray {
          * 
          * A pure virtual function whose implementation should unbind the vertex array.
          */
-        virtual void Unbind() = 0;
+        virtual void Unbind() const = 0;
 
         /**
          * @brief Define an array of generic vertex attribute data.
@@ -738,12 +721,11 @@ class VertexArray {
          * @return The vertex array with newly copied values.
          */
         VertexArray<A>& operator=(const VertexArray<A>& other) noexcept {
-            // Null check
-            if (other.array) {
-                this->array = other.array;
-            } else {
-                this->array = std::shared_ptr<A>(nullptr, [this](A* ptr) { if (!ptr) return; this->DestroyVertexArray(); delete ptr; });
-            }
+            if (this == &other) return *this;
+            
+            this->array = other.array;
+
+            return *this;
         }
 
         /**
@@ -755,13 +737,12 @@ class VertexArray {
          * @return The vertex array with newly moved values.
          */
         VertexArray<A>& operator=(VertexArray<A>&& other) noexcept {
-            // Null check
-            if (other.array) {
-                this->array = other.array;
-                other.array = std::shared_ptr<A>(nullptr, [this](A* ptr) { if (!ptr) return; this->DestroyVertexArray(); delete ptr; });
-            } else {
-                this->array = std::shared_ptr<A>(nullptr, [this](A* ptr) { if (!ptr) return; this->DestroyVertexArray(); delete ptr; });
-            }
+            if (this == &other) return *this;
+
+            this->array = other.array;
+            other.array = {};
+
+            return *this;
         }
 
         /**
@@ -808,6 +789,28 @@ enum class ShaderProgramPurpose {
 };
 
 /**
+ * @enum DrawMode
+ * @brief Specifies how vertices should be drawn.
+ * 
+ * States how vertices given to shaders should be drawn.
+ */
+enum class DrawMode {
+    POINTS,
+    LINE_STRIP,
+    LINE_LOOP,
+    LINES,
+    LINE_STRIP_ADJACENCY,
+    LINES_ADJACENCY,
+    TRIANGLE_STRIP,
+    TRIANGLE_FAN,
+    TRIANGLES,
+    TRIANGLE_STRIP_ADJACENCY,
+    TRIANGLES_ADJACENCY,
+    PATCHES,
+    None
+};
+
+/**
  * @class ShaderProgram
  * @brief Generic representation of a shader program.
  * 
@@ -824,7 +827,7 @@ class ShaderProgram {
         std::unique_ptr<Buffer<I>> UBO;
         std::unique_ptr<Buffer<I>> SSBO;
         // Graphics API representation of shader program
-        std::shared_ptr<I> program;
+        I program;
         // Uniform location cache
         std::unordered_map<std::string, size_t> uniforms;
 
@@ -835,10 +838,10 @@ class ShaderProgram {
          * A pure virtual function whose implementation should compile shader source into the Shader class.
          * 
          * @param type The type of shader being compiled.
-         * @param source The source code of the shader being compiled.
+         * @param path The source code location of the shader being compiled.
          * @return The newly created Shader instance in a unique pointer.
          */
-        virtual std::unique_ptr<Shader<I>> Compile(ShaderType type, const char* source) = 0;
+        virtual std::unique_ptr<Shader<I>> Compile(ShaderType type, const char* path) = 0;
 
         /**
          * @brief Gets the location of a uniform in a shader from name.
@@ -863,7 +866,7 @@ class ShaderProgram {
             this->UBO = nullptr;
             this->SSBO = nullptr;
             // Preserve custom deleter
-            this->program = std::shared_ptr<I>(nullptr, [this](I* ptr) { if (!ptr) return; this->DestroyShaderProgram(); delete ptr; });
+            this->program = {};
         }
 
         /**
@@ -879,10 +882,7 @@ class ShaderProgram {
             this->num_shaders = num_shaders;
             this->purpose = purpose;
             // Preserve deleters
-            this->program = std::shared_ptr<I>(nullptr, [this](I* ptr) { if (!ptr) return; this->DestroyShaderProgram(); delete ptr; });
-
-            // Create program
-            this->CreateShaderProgram();
+            this->program = {};
         }
 
         /**
@@ -895,26 +895,12 @@ class ShaderProgram {
         ShaderProgram(ShaderProgram<I>&& other) noexcept {
             // Copy values into this
             this->num_shaders = other.num_shaders;
-            this->num_buffers = other.num_buffers;
-            this->num_vertex_arrays = other.num_vertex_arrays;
             this->purpose = other.purpose;
-            // Deep copy vectors
-            this->buffers = std::vector<Buffer<I>>(other.buffers.begin(), other.buffers.end());
-            this->vertex_arrays = std::vector<VertexArray<I>>(other.vertex_arrays.begin(), other.vertex_arrays.end());
+            this->program = other.program;
             // Remove variables from other
             other.num_shaders = 0;
-            other.num_buffers = 0;
-            other.num_vertex_arrays = 0;
             other.purpose = ShaderProgramPurpose::None;
-            other.buffers.clear();
-            other.vertex_arrays.clear();
-            // Null check
-            if (other.program) {
-                this->program = other.program;
-                other.program = std::shared_ptr<I>(nullptr, [this](I* ptr) { if (!ptr) return; this->DestroyShaderProgram(); delete ptr; });
-            } else {
-                this->program = std::shared_ptr<I>(nullptr, [this](I* ptr) { if (!ptr) return; this->DestroyShaderProgram(); delete ptr; });
-            }
+            other.program = {};
         }
 
         /**
@@ -952,7 +938,7 @@ class ShaderProgram {
          * @param SSBO An existing SSBO to copy.
          */
         void CreateSSBO(Buffer<I>& SSBO) {
-            this->SSBO = SSBO->Copy();
+            this->SSBO = SSBO.Copy();
         }
 
         /**
@@ -965,20 +951,22 @@ class ShaderProgram {
         virtual std::unique_ptr<ShaderProgram<I>> CopyEmpty() = 0;
 
         /**
-         * @brief Creates a new copy of this.
-         * 
-         * A pure virtual function whose implementation should create a new shader program with the data of this.
-         * 
-         * @return A unique pointer to a shader program with the data of this.
-         */
-        virtual std::unique_ptr<ShaderProgram<I>> Copy() = 0;
-
-        /**
          * @brief Destructor.
          * 
          * A pure virtual function whose implementation should clean up any unhandled resources.
          */
-        virtual ~ShaderProgram() = 0;
+        virtual ~ShaderProgram() {};
+
+        /**
+         * @brief Gets program under the hood.
+         * 
+         * Retrives the graphics API representation of the program.
+         * 
+         * @return The id of the program in the graphics API.
+         */
+        I GetID() const noexcept {
+            return program;
+        }
 
         /**
          * @brief Attaches a shader to the program from file.
@@ -989,16 +977,6 @@ class ShaderProgram {
          * @param path The path of the file where the shader source is stored.
          */
         virtual void AttachFromFile(ShaderType type, const char* path) = 0;
-
-        /**
-         * @brief Attaches a shader to the program from source.
-         * 
-         * A pure virtual function whose implementation should compile the shader, before attaching it to the program.
-         * 
-         * @param type The type of shader being attached.
-         * @param source The full source code of the shader.
-         */
-        virtual void AttachFromSource(ShaderType type, const char* source) = 0;
 
         /**
          * @brief Links the shaders together into the program.
@@ -1062,6 +1040,10 @@ class ShaderProgram {
          */
         virtual void SetMat(const char* name, Matrix<float>& value) = 0;
 
+        virtual void BindUBO(const char* block, size_t binding) = 0;
+
+        virtual void BindSSBO(const char* block, size_t binding) = 0;
+
         /**
          * @brief Dispatches tasks to run in parallel.
          * 
@@ -1096,9 +1078,8 @@ class ShaderProgram {
          * 
          * A pure virtual function whose implementation should send vertices down the pipeline, but not update the window.
          */
-        virtual void Draw() = 0;
+        virtual void Draw(VertexArray<I>& VAO, DrawMode mode, std::vector<size_t> starts, std::vector<size_t> sizes) = 0;
 
-        
         /**
          * @brief Move operator.
          * 
@@ -1108,11 +1089,14 @@ class ShaderProgram {
          * @return The program with the newly moved data.
          */
         ShaderProgram<I>& operator=(ShaderProgram<I>&& other) noexcept {
+            if (this == &other) return *this;
+            
             // Copy values into this
             this->num_shaders = other.num_shaders;
             this->num_buffers = other.num_buffers;
             this->num_vertex_arrays = other.num_vertex_arrays;
             this->purpose = other.purpose;
+            this->program = other.program;
             // Deep copy vectors
             this->buffers = std::vector<Buffer<I>>(other.buffers.begin(), other.buffers.end());
             this->vertex_arrays = std::vector<VertexArray<I>>(other.vertex_arrays.begin(), other.vertex_arrays.end());
@@ -1123,13 +1107,9 @@ class ShaderProgram {
             other.purpose = ShaderProgramPurpose::None;
             other.buffers.clear();
             other.vertex_arrays.clear();
-            // Null check
-            if (other.program) {
-                this->program = other.program;
-                other.program = std::shared_ptr<I>(nullptr, [this](I* ptr) { if (!ptr) return; this->DestroyShaderProgram(); delete ptr; });
-            } else {
-                this->program = std::shared_ptr<I>(nullptr, [this](I* ptr) { if (!ptr) return; this->DestroyShaderProgram(); delete ptr; });
-            }
+            other.program = {};
+
+            return *this;
         }
         
         /**
@@ -1181,7 +1161,7 @@ class Window {
         // Window title
         const char* title;
         // Graphics API representation
-        std::unique_ptr<W, void (*)(W*)> window;
+        W* window{};
 
     public: 
         /**
@@ -1193,8 +1173,7 @@ class Window {
             this->width = 0;
             this->height = 0;
             this->title = "";
-            // Preserve custom deleter
-            this->window = std::make_unique<W, void (*)(W*)>(nullptr, [this](W* ptr) { if (!ptr) return; this->DestroyWindow(); delete ptr; });
+            this->window = {};
         }
 
         /**
@@ -1210,12 +1189,10 @@ class Window {
             this->width = width;
             this->height = height;
             this->title = title;
-
-            this->CreateWindow();
         }
 
         // Window is unique pointer, no copy operations
-        Window(const Window& other) = delete;
+        Window(const Window<W>& other) = delete;
 
         /**
          * @brief Move constructor.
@@ -1224,18 +1201,18 @@ class Window {
          * 
          * @param other A different window whose data will be moved into this.
          */
-        Window(Window&& other) noexcept {
+        Window(Window<W>&& other) noexcept {
             // Move values
             this->width = other.width;
             this->height = other.height;
             this->title = other.title;
-            this->window = std::move(other.window);
             
             // Set other's values to null
             other.width = 0;
             other.height = 0;
             other.title = "";
-            other.window = std::make_unique<W, void (*)(W*)>(nullptr, [this](W* ptr) { if (!ptr) return; this->DestroyWindow(); delete ptr; });
+            other.DestroyWindow();
+            other.window = nullptr;
         }
 
         /**
@@ -1246,7 +1223,7 @@ class Window {
         virtual void CreateWindow() = 0;
 
         /**
-         * @brief Destroyes window in graphics api.
+         * @brief Destroyes window in graphics API.
          * @warning Should only be used when reference count is 0 to prevent double frees or use after frees.
          * @warning Pointer is not deleted.
          * 
@@ -1288,7 +1265,27 @@ class Window {
          * 
          * A pure virtual function whose implementation should clean up resources not already accounted for.
          */
-        virtual ~Window() = 0;
+        virtual ~Window() {return;};
+
+        /**
+         * @brief Checks if the window should close.
+         * 
+         * A pure virtual function whose implementation should check if the window should close.
+         * 
+         * @return True if the window should close, otherwise false.
+         */
+        virtual bool ShouldClose() = 0;
+
+        /**
+         * @brief Gets window id under the hood.
+         * 
+         * Retrieves the graphics API window id.
+         * 
+         * @return The window in the graphics API.
+         */
+        W* GetID() const noexcept {
+            return window;
+        }
 
         /**
          * @brief Set all data to null.
@@ -1296,7 +1293,7 @@ class Window {
          * 
          * A pure virtual function whose implementation should clear all data in this.
          */
-        virtual void Clear() = 0;
+        virtual void ClearData() = 0;
 
         /**
          * @brief Swaps display buffers.
@@ -1319,12 +1316,14 @@ class Window {
             this->width = other.width;
             this->height = other.height;
             this->title = other.title;
-            this->window = std::move(other.window);
+            this->window = other.window;
 
             other.width = 0;
             other.height = 0;
             other.title = "";
-            other.window = std::make_unique<W, void (*)(W*)>(nullptr, [this](W* ptr) { if (!ptr) return; this->DestroyWindow(); delete ptr; });
+            other.DestroyWindow();
+            delete other.window;
+            other.window = nullptr;
 
             return *this;
         }
@@ -1366,7 +1365,7 @@ class GraphicsAPIContext {
         // If graphics API is initialized.
         bool initialized;
         // The window - required for loading graphics API.
-        Window<W> window;
+        std::unique_ptr<Window<W>> window;
         // Vertex buffer - not required.
         std::unique_ptr<Buffer<I>> VBO;
         // Vertex array - not required.
@@ -1382,7 +1381,7 @@ class GraphicsAPIContext {
          */
         GraphicsAPIContext() noexcept {
             this->initialized = false;
-            this->window = Window<W>();
+            this->window = nullptr;
             this->VBO = nullptr;
             this->VAO = nullptr;
             this->program = nullptr;
@@ -1478,15 +1477,6 @@ class GraphicsAPIContext {
         /**
          * @brief Copies data.
          * 
-         * A pure virtual function whose implementation should copy data from another context.
-         * 
-         * @param other Another context whose data will be cloned.
-         */
-        virtual void Clone(GraphicsAPIContext<W, I>& other) = 0;
-
-        /**
-         * @brief Copies data.
-         * 
          * A pure virtual function whose implementation should set data from args.
          * 
          * @param win_width The width of the window.
@@ -1500,7 +1490,7 @@ class GraphicsAPIContext {
          * 
          * A pure virtual function whose implementation should handle clean up data - this includes calling Unitialize().
          */
-        virtual ~GraphicsAPIContext() = 0;
+        virtual ~GraphicsAPIContext() {return;};
 
         /**
          * @brief Move operator.
@@ -1511,6 +1501,8 @@ class GraphicsAPIContext {
          * @return The context with newly moved data.
          */
         GraphicsAPIContext<W, I>& operator=(GraphicsAPIContext<W, I>&& other) noexcept {
+            if (this == &other) return *this;
+            
             this->Unitialize();
 
             this->initialized = other.initialized;
@@ -1524,6 +1516,8 @@ class GraphicsAPIContext {
             other.VBO = nullptr;
             other.VAO = nullptr;
             other.program = nullptr;
+
+            return *this;
         }
 
         /**
@@ -1549,6 +1543,192 @@ class GraphicsAPIContext {
         bool operator!=(GraphicsAPIContext<W, I>& other) const noexcept {
             return !(*this == other);
         }
+};
+
+class OpenGLShader : public Shader<GLuint> {
+    protected:
+        GLenum GetType() const;
+
+    public:
+        OpenGLShader() noexcept;
+
+        OpenGLShader(const OpenGLShader& other) noexcept;
+
+        OpenGLShader(OpenGLShader&& other) noexcept;
+
+        void CreateShader() override;
+
+        void DestroyShader() override;
+
+        void Clone(ShaderType type, const char* path) override;
+
+        void Clone(ShaderType type, GLuint& other) override;
+
+        std::unique_ptr<Shader<GLuint>> CopyEmpty() override;
+
+        std::unique_ptr<Shader<GLuint>> Copy() override;
+
+        ~OpenGLShader() override;
+};
+
+class OpenGLBuffer : public Buffer<GLuint> {
+    protected:
+        GLenum GetType() const;
+
+        GLenum GetUsageType(BufferUsageType type) const;
+
+        void GetReadWrite();
+
+    public:
+        OpenGLBuffer() noexcept;
+
+        OpenGLBuffer(const OpenGLBuffer& other) noexcept;
+
+        OpenGLBuffer(OpenGLBuffer&& other) noexcept;
+
+        void CreateBuffer() override;
+
+        void DestroyBuffer() override;
+
+        void Clone(BufferType type, size_t binding) override;
+
+        void Clone(BufferType type, GLuint& other) override;
+
+        std::unique_ptr<Buffer<GLuint>> CopyEmpty() override;
+
+        std::unique_ptr<Buffer<GLuint>> Copy() override;
+
+        ~OpenGLBuffer() override;
+
+        void Bind() const override;
+
+        void Unbind() const override;
+
+        void SetData(size_t size, const void* data, BufferUsageType usage) override;
+
+        void Update(size_t offset, size_t size, const void* data) override;
+
+        void BindBase(size_t binding) override;
+};
+
+class OpenGLVertexArray : public VertexArray<GLuint> {
+    protected:
+        GLenum GetVertexArrayAttribType(VertexArrayAttribType type) const;
+
+    public:
+        OpenGLVertexArray() noexcept;
+
+        OpenGLVertexArray(const OpenGLVertexArray& other) noexcept;
+
+        OpenGLVertexArray(OpenGLVertexArray&& other) noexcept;
+
+        void CreateVertexArray() override;
+
+        void DestroyVertexArray() override;
+
+        void Clone(GLuint& other) override;
+
+        std::unique_ptr<VertexArray<GLuint>> CopyEmpty() override;
+
+        std::unique_ptr<VertexArray<GLuint>> Copy() override;
+
+        ~OpenGLVertexArray() override;
+
+        void Bind() const override;
+
+        void Unbind() const override;
+
+        void AddAttribute(size_t index, size_t size, VertexArrayAttribType type, bool normalised, size_t stride, const void* offset) override;
+};
+
+class OpenGLShaderProgram : public ShaderProgram<GLuint> {
+    protected:
+        std::unique_ptr<Shader<GLuint>> Compile(ShaderType type, const char* path) override;
+    
+        size_t GetUniformLocation(const char* name) override;
+
+        GLenum GetMode(DrawMode mode);
+
+    public:
+        OpenGLShaderProgram() noexcept;
+
+        OpenGLShaderProgram(ShaderProgramPurpose purpose) noexcept;
+
+        OpenGLShaderProgram(OpenGLShaderProgram&& other) noexcept;
+
+        void CreateShaderProgram() override;
+
+        void DestroyShaderProgram() override;
+
+        std::unique_ptr<ShaderProgram<GLuint>> CopyEmpty() override;
+
+        ~OpenGLShaderProgram() override;
+
+        void AttachFromFile(ShaderType type, const char* path) override;
+
+        void Link() override;
+
+        void Use() const override;
+
+        void Unuse() override;
+
+        void SetInt(const char* name, int value) override;
+
+        void SetFloat(const char* name, float value) override;
+
+        void SetVec(const char* name, Vector<float>& value) override;
+
+        void SetMat(const char* name, Matrix<float>& value) override;
+
+        void BindUBO(const char* block, size_t binding) override;
+
+        void BindSSBO(const char* block, size_t binding) override;
+
+        void Dispatch(size_t x, size_t y, size_t z) override;
+
+        void WaitDispatchComplete() override;
+
+        void* GetDispatchResult() override;
+
+        void Draw(VertexArray<GLuint>& VAO, DrawMode mode, std::vector<size_t> starts, std::vector<size_t> sizes) override;
+};
+
+class OpenGLWindow : public Window<GLFWwindow> {
+    public:
+        OpenGLWindow() noexcept;
+
+        OpenGLWindow(size_t width, size_t height, const char* title) noexcept;
+
+        OpenGLWindow(OpenGLWindow&& other) noexcept;
+
+        void CreateWindow() override;
+
+        void DestroyWindow() override;
+
+        void Clone(size_t width, size_t height, const char* title) override;
+
+        void Clone(GLFWwindow* other) override;
+
+        std::unique_ptr<Window<GLFWwindow>> CopyEmpty() override;
+
+        ~OpenGLWindow() override;
+
+        bool ShouldClose() override;
+
+        void ClearData() override;
+
+        void Display() override;
+};
+
+class OpenGLContext : GraphicsAPIContext<GLFWwindow, GLuint> {
+    public:
+        void Initialize() override;
+
+        void Uninitialize() override;
+
+        void Clone(size_t win_width, size_t win_height, const char* win_title) override;
+
+        ~OpenGLContext() override;
 };
 
 /**
@@ -1707,7 +1887,7 @@ class Vector {
                  * @return The item at the current index.
                  */
                 const T& operator*() const {
-                    return *(vec[idx]);
+                    return (*vec)[idx];
                 }
 
                 /**
@@ -1718,7 +1898,7 @@ class Vector {
                  * @return A pointer to the item at the current index.
                  */
                 T* operator->() const {
-                    return vec[idx];
+                    return &vec[idx];
                 }
 
                 /**

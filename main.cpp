@@ -5,6 +5,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <cstring>
 
 class MyDataSet : public DataSet {
     public:
@@ -171,6 +172,7 @@ int main() {
     return 0;
     */
 
+    /*
     glfwInit();
 
     GLFWwindow* window =
@@ -221,6 +223,41 @@ int main() {
         std::cout << ptr[i] << std::endl;
 
     glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+
+    glfwDestroyWindow(window);
+    */
+    OpenGLContext context;
+    context.Initialize();
+
+    OpenGLShaderProgram program(ShaderProgramPurpose::Compute);
+    program.AttachFromFile(ShaderType::Compute, "compute.glsl");
+    program.Link();
+
+    std::vector<float> data;
+    for (size_t i = 1; i < 101; i++) {
+        data.push_back(i);
+    }
+
+    OpenGLBuffer SSBO;
+    SSBO.Clone(BufferType::ShaderStorageBufferObject, 0);
+    SSBO.SetData(data.size() * sizeof(float), data.data(), BufferUsageType::DYNAMIC_COPY);
+    SSBO.BindBase(0);
+
+    program.CreateSSBO(SSBO);
+
+    program.Use();
+
+    program.Dispatch((data.size() + 10 - 1) / 10, 1, 1);
+
+    program.WaitDispatchComplete();
+
+    float* ptr = (float*)program.GetDispatchResult();
+    std::vector<float> res(ptr, ptr + data.size());
+    glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+
+    for (size_t i = 0; i < data.size(); i++) {
+        std::cout << data[i] << " " << res[i] << "\n";
+    }
 
     return 0;
 }
