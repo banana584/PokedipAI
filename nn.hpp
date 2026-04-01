@@ -1545,190 +1545,774 @@ class GraphicsAPIContext {
         }
 };
 
+/**
+ * @class OpenGLShader
+ * @brief OpenGL representation of shaders.
+ * 
+ * Inherits from generic Shader class, specifying to OpenGL.
+ */
 class OpenGLShader : public Shader<GLuint> {
     protected:
+        /**
+         * @brief Helper function to convert enum to OpenGL.
+         * 
+         * Converts the ShaderType enum to OpenGL GLenum values.
+         * 
+         * @return The type of shader in GLenum form.
+         */
         GLenum GetType() const;
 
     public:
+        /**
+         * @brief Default constructor.
+         * 
+         * @see Shader::Shader
+         * 
+         * Calls Shader default constructor.
+         */
         OpenGLShader() noexcept;
 
+        /**
+         * @brief Copy constructor.
+         * 
+         * @see Shader::Shader
+         * 
+         * Calls Shader copy constructor.
+         */
         OpenGLShader(const OpenGLShader& other) noexcept;
 
+        /**
+         * @brief Move constructor.
+         * 
+         * @see Shader::Shader
+         * 
+         * Calls Shader move constructor.
+         */
         OpenGLShader(OpenGLShader&& other) noexcept;
 
+        /**
+         * @brief Destructor.
+         * 
+         * Cleans up shader data.
+         */
+        ~OpenGLShader() override;
+
+        /**
+         * @brief Creates OpenGL shader from member variables.
+         * 
+         * Reads member variables and uses OpenGL to create a shader.
+         */
         void CreateShader() override;
 
+        /**
+         * @brief Destroyes OpenGL shader.
+         * 
+         * Reads OpenGL shader and destroys it.
+         */
         void DestroyShader() override;
 
+        /**
+         * @brief Sets member variables from args.
+         * 
+         * Reads arguments and initializes a shader from them.
+         * 
+         * @param type The type of shader to make.
+         * @param path The path of source code to read.
+         */
         void Clone(ShaderType type, const char* path) override;
 
+        /**
+         * @brief Sets member variables from args.
+         * 
+         * Reads arguments and initializes a shader from them.
+         * 
+         * @param type The type of shader to make.
+         * @param other A graphics API representation of the shader.
+         */
         void Clone(ShaderType type, GLuint& other) override;
 
+        /**
+         * @brief Creates an empty shader.
+         * 
+         * Makes a new unique pointer to an empty shader.
+         * 
+         * @return A unique pointer to a new empty shader.
+         */
         std::unique_ptr<Shader<GLuint>> CopyEmpty() override;
 
+        /**
+         * @brief Creates a copy of this.
+         * 
+         * Makes a new unique pointer to a copy of this.
+         * 
+         * @return A unique pointer to a new copy of this.
+         */
         std::unique_ptr<Shader<GLuint>> Copy() override;
-
-        ~OpenGLShader() override;
 };
 
+/**
+ * @class OpenGLBuffer
+ * @brief OpenGL representation of buffers.
+ * 
+ * Inherited from generic Buffer class, to specify OpenGL.
+ */
 class OpenGLBuffer : public Buffer<GLuint> {
     protected:
+        /**
+         * @brief Converts generic BufferType enum into GLenum.
+         * 
+         * Converts generic enum of BufferType into specific OpenGL GLenum.
+         * 
+         * @return The GLenum of the BufferType.
+         */
         GLenum GetType() const;
 
+        /**
+         * @brief Converts generic BufferUsageType enum into GLenum.
+         * 
+         * Converts generic enum of BufferType into specific OpenGL GLenum.
+         * 
+         * @param type The BufferUsageType to convert.
+         * @return The GLenum of the BufferUsageType.
+         */
         GLenum GetUsageType(BufferUsageType type) const;
 
+        /**
+         * @brief Gets default Read/Write permissions from type.
+         * 
+         * Converts buffer type into default permissions of Read/Write.
+         */
         void GetReadWrite();
 
     public:
+        /**
+         * @brief Default constructor.
+         * 
+         * Initializes all values to 0.
+         */
         OpenGLBuffer() noexcept;
 
+        /**
+         * @brief Copy constructor.
+         * 
+         * Copies data from another buffer.
+         * 
+         * @param other A different OpenGLBuffer to copy data from.
+         */
         OpenGLBuffer(const OpenGLBuffer& other) noexcept;
 
+        /**
+         * @brief Move constructor.
+         * 
+         * Moves data from another buffer.
+         * 
+         * @param other A different OpenGLBuffer to move data from.
+         */
         OpenGLBuffer(OpenGLBuffer&& other) noexcept;
 
-        void CreateBuffer() override;
-
-        void DestroyBuffer() override;
-
-        void Clone(BufferType type, size_t binding) override;
-
-        void Clone(BufferType type, GLuint& other) override;
-
-        std::unique_ptr<Buffer<GLuint>> CopyEmpty() override;
-
-        std::unique_ptr<Buffer<GLuint>> Copy() override;
-
+        /**
+         * @brief Destructor.
+         * 
+         * Cleans up OpenGL data.
+         */
         ~OpenGLBuffer() override;
 
+        /**
+         * @brief Creates buffer in OpenGL.
+         * 
+         * Calls OpenGL to create a buffer based off member variables.
+         */
+        void CreateBuffer() override;
+
+        /**
+         * @brief Destroyes buffer in OpenGL.
+         * 
+         * Calls OpenGL to destroy a buffer.
+         */
+        void DestroyBuffer() override;
+
+        /**
+         * @brief Initializes member variables from args.
+         * 
+         * Copies args and initializes this from them.
+         * 
+         * @param type The type of buffer to make this.
+         * @param binding The binding of the buffer in the shaders.
+         */
+        void Clone(BufferType type, size_t binding) override;
+
+        /**
+         * @brief Initializes member variables from args.
+         * 
+         * Copies args and initializes this from them.
+         * 
+         * @param type The type of buffer to make this.
+         * @param other The OpenGL representation of a buffer.
+         */
+        void Clone(BufferType type, GLuint& other) override;
+
+        /**
+         * @brief Creates an empty copy of a buffer.
+         * 
+         * Constructs a new default buffer.
+         * 
+         * @return A unique pointer to a new empty buffer.
+         */
+        std::unique_ptr<Buffer<GLuint>> CopyEmpty() override;
+
+        /**
+         * @brief Creates a copy of this.
+         * 
+         * Constructs a new buffer with a copy of this.
+         * 
+         * @return A unique pointer to a new copy of this.
+         */
+        std::unique_ptr<Buffer<GLuint>> Copy() override;
+
+        /**
+         * @brief Binds buffer in OpenGL.
+         * 
+         * Calls OpenGL to bind the buffer.
+         */
         void Bind() const override;
 
+        /**
+         * @brief Unbinds buffer in OpenGL.
+         * 
+         * Calls OpenGL to unbind the buffer.
+         */
         void Unbind() const override;
 
+        /**
+         * @brief Puts data into a buffer.
+         * 
+         * Binds the buffer, before putting size bytes of data into it.
+         * 
+         * @param size The amount of data in bytes to put in.
+         * @param data The data to put in.
+         * @param usage The usage type of data.
+         */
         void SetData(size_t size, const void* data, BufferUsageType usage) override;
 
+        /**
+         * @brief Updates a subset of data in a buffer.
+         * 
+         * Binds the buffer, before updating a subset of data.
+         * 
+         * @param offset The offset to the start of data to update.
+         * @param size The amount of data in bytes to update.
+         * @param data The data to put in.
+         */
         void Update(size_t offset, size_t size, const void* data) override;
 
+        /**
+         * @brief Binds a buffer to a binding in the shader.
+         * @warning Only works on UBO and SSBO
+         * 
+         * Binds the buffer to a specific binding in shaders.
+         * 
+         * @param binding The binding to put the buffer on in the shader.
+         */
         void BindBase(size_t binding) override;
 };
 
+/**
+ * @class OpenGLVertexArray
+ * @brief OpenGL specified version of generic Vertex Array.
+ * 
+ * Inherits from generic Vertex Array, specifying to OpenGL.
+ */
 class OpenGLVertexArray : public VertexArray<GLuint> {
     protected:
+        /**
+         * @brief Converts generic Vertex Array Attrib Type into GLenum.
+         * 
+         * Converts generic enum into specific OpenGL GLenum.
+         * 
+         * @param type The Vertex Array Attrib Type to convert.
+         * @return The specific GLenum value.
+         */
         GLenum GetVertexArrayAttribType(VertexArrayAttribType type) const;
 
     public:
+        /**
+         * @brief Default constructor.
+         * 
+         * Initializes all values to 0.
+         */
         OpenGLVertexArray() noexcept;
 
+        /**
+         * @brief Copy constructor.
+         * 
+         * Copies values from another Vertex Array into this.
+         * 
+         * @param other A different Vertex Array to copy into this.
+         */
         OpenGLVertexArray(const OpenGLVertexArray& other) noexcept;
 
+        /**
+         * @brief Move constructor.
+         * 
+         * Moves values from another Vertex Array into this.
+         * 
+         * @param other A different Vertex Array to move into this.
+         */
         OpenGLVertexArray(OpenGLVertexArray&& other) noexcept;
 
-        void CreateVertexArray() override;
-
-        void DestroyVertexArray() override;
-
-        void Clone(GLuint& other) override;
-
-        std::unique_ptr<VertexArray<GLuint>> CopyEmpty() override;
-
-        std::unique_ptr<VertexArray<GLuint>> Copy() override;
-
+        /**
+         * @brief Destructor.
+         * 
+         * Cleans up Vertex Array in OpenGL.
+         */
         ~OpenGLVertexArray() override;
 
+        /**
+         * @brief Creates a Vertex Array in OpenGL.
+         * 
+         * Calls OpenGL to create a Vertex Array.
+         */
+        void CreateVertexArray() override;
+
+        /**
+         * @brief Destroys a Vertex Array in OpenGL.
+         * 
+         * Calls OpenGL to destroy a Vertex Array.
+         */
+        void DestroyVertexArray() override;
+
+        /**
+         * @brief Copies values from another Vertex Array into this.
+         * 
+         * Takes an OpenGL raw Vertex Array and copies it into this.
+         * 
+         * @param other A raw OpenGL Vertex Array to copy.
+         */
+        void Clone(GLuint& other) override;
+
+        /**
+         * @brief Creates an empty copy of a Vertex Array.
+         * 
+         * Constructs a new empty Vertex Array.
+         * 
+         * @return A unique pointer to a new empty Vertex Array.
+         */
+        std::unique_ptr<VertexArray<GLuint>> CopyEmpty() override;
+
+        /**
+         * @brief Creates a new copy of this.
+         * 
+         * Constructs a new Vertex Array with the data of this.
+         * 
+         * @return A unique pointer to a new Vertex Array with the data of this.
+         */
+        std::unique_ptr<VertexArray<GLuint>> Copy() override;
+
+        /**
+         * @brief Binds the Vertex Array.
+         * 
+         * Calls OpenGL to bind the Vertex Array.
+         */
         void Bind() const override;
 
+        /**
+         * @brief Unbinds the Vertex Array.
+         * 
+         * Calls OpenGL to unbind the Vertex Array.
+         */
         void Unbind() const override;
 
+        /**
+         * @brief Adds an attribute into the Vertex Array.
+         * 
+         * Writes new data into the Vertex Array.
+         * 
+         * @param index The index of the vertex attribute to be modified.
+         * @param size The number of components per vertex attribute.
+         * @param type The type of data of each component.
+         * @param normalised If fixed point data values should be normalised.
+         * @param stride The byte offset between consecutive vertex attributes.
+         * @param offset The offset of the first component of the first vertex attribute.
+         */
         void AddAttribute(size_t index, size_t size, VertexArrayAttribType type, bool normalised, size_t stride, const void* offset) override;
 };
 
+/**
+ * @class OpenGLShaderProgram
+ * @brief OpenGL specific version of ShaderProgram.
+ * 
+ * Inherited from the ShaderProgram and specifies for OpenGL.
+ */
 class OpenGLShaderProgram : public ShaderProgram<GLuint> {
     protected:
+        /**
+         * @brief Creates and compiles a shader.
+         * 
+         * Constructs a new compiled shader from args.
+         * 
+         * @param type The type of shader to compile.
+         * @param path The path to the source code.
+         * @return A unique pointer to the new compiled shader.
+         */
         std::unique_ptr<Shader<GLuint>> Compile(ShaderType type, const char* path) override;
     
+        /**
+         * @brief Gets the location of a uniform.
+         * 
+         * Checks cache for uniform, if it is not there OpenGL is called and location is added to cache.
+         * 
+         * @param name The name of the uniform being searched for.
+         * @return The location of the uniform.
+         */
         size_t GetUniformLocation(const char* name) override;
 
+        /**
+         * @brief Converts a draw mode into OpenGL enum.
+         * 
+         * Converts a generic Draw Mode enum into a specific OpenGL GLenum.
+         * 
+         * @param mode The generic draw mode to convert into OpenGL.
+         * @return The specific OpenGL value.
+         */
         GLenum GetMode(DrawMode mode);
 
     public:
+        /**
+         * @brief Default constructor.
+         * 
+         * Initializes all values to 0.
+         */
         OpenGLShaderProgram() noexcept;
 
+        /**
+         * @brief Constructor.
+         * 
+         * Initializes values from args.
+         * 
+         * @param purpose The purpose of the shader program.
+         */
         OpenGLShaderProgram(ShaderProgramPurpose purpose) noexcept;
 
+        /**
+         * @brief Move constructor.
+         * 
+         * Moves data from another program into this.
+         * 
+         * @param other A different program whose data will be moved into this.
+         */
         OpenGLShaderProgram(OpenGLShaderProgram&& other) noexcept;
 
-        void CreateShaderProgram() override;
-
-        void DestroyShaderProgram() override;
-
-        std::unique_ptr<ShaderProgram<GLuint>> CopyEmpty() override;
-
+        /**
+         * @brief Destructor.
+         * 
+         * Cleans up OpenGL data.
+         */
         ~OpenGLShaderProgram() override;
 
+        /**
+         * @brief Creates a shader program.
+         * 
+         * Reads member variables and initialzies a shader program from them.
+         */
+        void CreateShaderProgram() override;
+
+        /**
+         * @brief Destroyes a shader program.
+         * 
+         * Calls OpenGL to destroy the current program.
+         */
+        void DestroyShaderProgram() override;
+
+        /**
+         * @brief Creates an empty new program.
+         * 
+         * Constructs a new program filled with empty data.
+         * 
+         * @return A unique pointer to a new empty program.
+         */
+        std::unique_ptr<ShaderProgram<GLuint>> CopyEmpty() override;
+
+        /**
+         * @brief Attaches a shader to the program.
+         * 
+         * Constructs a shader and attaches it to the program.
+         * 
+         * @param type The type of shader to attach.
+         * @param path The path to source code of the shader.
+         */
         void AttachFromFile(ShaderType type, const char* path) override;
 
+        /**
+         * @brief Links all attached shaders together.
+         * 
+         * Calls OpenGL to link shaders and program together.
+         */
         void Link() override;
 
+        /**
+         * @brief Sets the program as currently used.
+         * 
+         * Calls OpenGL to use the program.
+         */
         void Use() const override;
 
+        /**
+         * @brief Sets the program as unused.
+         * 
+         * Calls OpenGL to stop using the program.
+         */
         void Unuse() override;
 
+        /**
+         * @brief Sets an int uniform.
+         * 
+         * Sets an integer into a uniform value.
+         * 
+         * @param name The name of the uniform.
+         * @param value The integer value.
+         */
         void SetInt(const char* name, int value) override;
 
+        /**
+         * @brief Sets a float uniform.
+         * 
+         * Sets a float into a uniform value.
+         * 
+         * @param name The name of the uniform.
+         * @param value The float value.
+         */
         void SetFloat(const char* name, float value) override;
 
+        /**
+         * @brief Sets a vector uniform.
+         * 
+         * Sets a vector into a uniform value.
+         * 
+         * @param name The name of the uniform.
+         * @param value The vector value.
+         */
         void SetVec(const char* name, Vector<float>& value) override;
 
+        /**
+         * @brief Sets a matrix uniform.
+         * 
+         * Sets a matrix into a uniform value.
+         * 
+         * @param name The name of the uniform.
+         * @param value The matrix value.
+         */
         void SetMat(const char* name, Matrix<float>& value) override;
 
+        /**
+         * @brief Binds the UBO to a block and binding.
+         * 
+         * Calls OpenGL to bind the UBO in the shader.
+         * 
+         * @param block The block to bind the UBO to.
+         * @param binding The binding to bind the UBO to.
+         */
         void BindUBO(const char* block, size_t binding) override;
 
+        /**
+         * @brief Binds the SSBO to a block and binding.
+         * 
+         * Calls OpenGL to bind the SSBO in the shader.
+         * 
+         * @param block The block to bind the SSBO to.
+         * @param binding The binding to bind the SSBO to.
+         */
         void BindSSBO(const char* block, size_t binding) override;
 
+        /**
+         * @brief Dispatches a compute onto the GPU.
+         * 
+         * Calls OpenGL to dispatch a compute for the GPU to process.
+         * 
+         * @param x The x size.
+         * @param y The y size.
+         * @param z The z size.
+         */
         void Dispatch(size_t x, size_t y, size_t z) override;
 
+        /**
+         * @brief Waits for a compute to complete.
+         * 
+         * Calls OpenGL to wait for a compute to finish, then returns.
+         */
         void WaitDispatchComplete() override;
 
+        /**
+         * @brief Gets the result from the GPU after a compute.
+         * 
+         * Gets result back from the GPU via OpenGL.
+         * 
+         * @return A void* to the data from the GPU.
+         */
         void* GetDispatchResult() override;
 
+        /**
+         * @brief Draws vertices to the screen
+         * 
+         * Calls OpenGL to call shaders and draw vertices.
+         * 
+         * @param VAO The VAO with vertex information.
+         * @param mode The draw mode to use.
+         * @param starts A vector of when each shape starts.
+         * @param sizes A vector of how many vertices each shape has.
+         */
         void Draw(VertexArray<GLuint>& VAO, DrawMode mode, std::vector<size_t> starts, std::vector<size_t> sizes) override;
 };
 
+/**
+ * @class OpenGLWindow
+ * @brief OpenGL representation of generic window.
+ * 
+ * Inherits from Window class, specifying to OpenGL.
+ */
 class OpenGLWindow : public Window<GLFWwindow> {
     public:
+        /**
+         * @brief Default constructor.
+         * 
+         * Initializes all values to 0.
+         */
         OpenGLWindow() noexcept;
 
+        /**
+         * @brief Constructor.
+         * 
+         * Initializes member variables from args.
+         * 
+         * @param width The width of the window in pixels.
+         * @param height The height of the window in pixels.
+         * @param title The title of the window.
+         */
         OpenGLWindow(size_t width, size_t height, const char* title) noexcept;
 
+        /**
+         * @brief Move constructor.
+         * 
+         * Moves data from another window into this.
+         * 
+         * @param other A different window whose data will be moved into this.
+         */
         OpenGLWindow(OpenGLWindow&& other) noexcept;
 
-        void CreateWindow() override;
-
-        void DestroyWindow() override;
-
-        void Clone(size_t width, size_t height, const char* title) override;
-
-        void Clone(GLFWwindow* other) override;
-
-        std::unique_ptr<Window<GLFWwindow>> CopyEmpty() override;
-
+        /**
+         * @brief Destructor.
+         * 
+         * Cleans up data.
+         */
         ~OpenGLWindow() override;
 
+        /**
+         * @brief Creates a window from member variables.
+         * 
+         * Creates a new window from GLFW.
+         */
+        void CreateWindow() override;
+
+        /**
+         * @brief Destroys a window.
+         * 
+         * Calls GLFW to destroy a window.
+         */
+        void DestroyWindow() override;
+
+        /**
+         * @brief Sets member variables from args.
+         * 
+         * Initializes a window from args.
+         * 
+         * @param width The width of the window.
+         * @param height The height of the window.
+         * @param title The title of the window.
+         */
+        void Clone(size_t width, size_t height, const char* title) override;
+
+        /**
+         * @brief Initilizes a window from GLFW window.
+         * 
+         * Gets data from another window in GLFW.
+         * 
+         * @param other GLFW representation of a window.
+         */
+        void Clone(GLFWwindow* other) override;
+
+        /**
+         * @brief Creates a new empty window.
+         * 
+         * Creates a new window filled with empty data.
+         * 
+         * @return A unique pointer to a new empty window.
+         */
+        std::unique_ptr<Window<GLFWwindow>> CopyEmpty() override;
+
+        /**
+         * @brief Checks if a window should close.
+         * 
+         * Calls GLFW to check if a window should close this frame.
+         * 
+         * @return True if the window should close, otherwise false.
+         */
         bool ShouldClose() override;
 
+        /**
+         * @brief Set all data to 0.
+         * 
+         * Clears all data in the window to 0.
+         */
         void ClearData() override;
 
+        /**
+         * @brief Displays what is drawn on the window.
+         * 
+         * Calls GLFW to display what is currently drawn.
+         */
         void Display() override;
 };
 
 class OpenGLContext : GraphicsAPIContext<GLFWwindow, GLuint> {
     public:
+        /**
+         * @brief Default constructor.
+         * 
+         * Sets data to 0 and initializes OpenGL.
+         */
+        OpenGLContext() noexcept;
+
+        /**
+         * @brief Destructor.
+         * 
+         * Clears data and uninitializes OpenGL.
+         */
+        ~OpenGLContext() override;
+
+        /**
+         * @brief Initializes OpenGL.
+         * 
+         * Sets up OpenGL for use.
+         */
         void Initialize() override;
 
+        /**
+         * @brief Uninitializes OpenGL.
+         * 
+         * Cleans up OpenGL data after use.
+         */
         void Uninitialize() override;
 
+        /**
+         * @brief Initializes data from args.
+         * 
+         * Sets member variables from arguments.
+         * 
+         * @param win_width The width of the current window.
+         * @param win_height The height of the current window.
+         * @param win_title The title of the current window.
+         */
         void Clone(size_t win_width, size_t win_height, const char* win_title) override;
 
-        ~OpenGLContext() override;
 };
 
 /**

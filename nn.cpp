@@ -570,6 +570,11 @@ void OpenGLWindow::Display() {
     glfwSwapBuffers(window);
 }
 
+OpenGLContext::OpenGLContext() noexcept : GraphicsAPIContext<GLFWwindow, GLuint>() {
+    Initialize();
+    return;
+}
+
 void OpenGLContext::Initialize() {
     if (initialized) return;
 

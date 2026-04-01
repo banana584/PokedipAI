@@ -227,7 +227,6 @@ int main() {
     glfwDestroyWindow(window);
     */
     OpenGLContext context;
-    context.Initialize();
 
     OpenGLShaderProgram program(ShaderProgramPurpose::Compute);
     program.AttachFromFile(ShaderType::Compute, "compute.glsl");
